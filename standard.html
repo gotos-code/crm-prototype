@@ -193,7 +193,7 @@
             <table>
               <thead><tr>
                 <th>会社名</th><th>業種</th><th>担当者</th><th>直近アプローチ日</th>
-                <th>進捗率</th><th>ネクストアクション</th><th>ネクストアクション日</th>
+                <th>進捗内容</th><th>確度</th><th>ネクストアクション</th><th>ネクストアクション日</th>
               </tr></thead>
               <tbody id="companyTbody"></tbody>
             </table>
@@ -229,7 +229,7 @@
         <div class="tabs">
           <div class="tab active" data-tab="person">担当者ごと</div>
           <div class="tab" data-tab="deal">案件ごと</div>
-          <div class="tab" data-tab="rate">進捗率ごと</div>
+          <div class="tab" data-tab="rate">確度ごと</div>
           <div class="tab" data-tab="nextdate">ネクストアクション日ごと</div>
         </div>
         <div class="export-row">
@@ -251,14 +251,14 @@
     </div>
     <div class="drawer-body">
       <div class="subhead">新しい進捗を記録</div>
+      <div class="field"><label>アプローチ日</label><input type="date" id="f_date"></div>
       <div class="grid2">
-        <div class="field"><label>アプローチ日</label><input type="date" id="f_date"></div>
-        <div class="field"><label>進捗率（%）</label><input type="number" id="f_rate" min="0" max="100" step="5"></div>
+        <div class="field"><label>進捗内容</label><select id="f_stage"></select></div>
+        <div class="field"><label>確度</label><input type="text" id="f_confidence" readonly disabled></div>
       </div>
-      <div class="field"><label>進捗内容</label><textarea id="f_progress" placeholder="例）担当者と初回打合せ実施。要件をヒアリング。"></textarea></div>
-      <div class="field"><label>提案内容</label><textarea id="f_proposal" placeholder="例）基本プラン＋オプションBを提案予定"></textarea></div>
+      <div class="field"><label>進捗詳細（任意）</label><textarea id="f_detail" placeholder="例）担当者と初回打合せ実施。要件をヒアリング。"></textarea></div>
       <div class="grid2">
-        <div class="field"><label>ネクストアクション</label><input type="text" id="f_nextaction" placeholder="例）見積書を送付する"></div>
+        <div class="field"><label>ネクストアクション</label><select id="f_nextaction"></select></div>
         <div class="field"><label>ネクストアクション日</label><input type="date" id="f_nextdate"></div>
       </div>
       <button class="btn btn-primary" id="saveLog" style="width:100%;">この内容で記録する</button>
@@ -278,17 +278,31 @@
   const REPS = ['goto.s@sora1.jp','tanaka.m@sora1.jp','suzuki.k@sora1.jp','yamamoto.r@sora1.jp'];
   if(window.__CRM_USER_EMAIL && !REPS.includes(window.__CRM_USER_EMAIL)) REPS.unshift(window.__CRM_USER_EMAIL);
 
+  const STAGES = [
+    { stage:'未着手', confidence:'未着手', rate:0 },
+    { stage:'失注', confidence:'0%', rate:0 },
+    { stage:'商談設定/アポイント設定', confidence:'20%', rate:20 },
+    { stage:'提案実施/提案内容作成、先方へ提案実施', confidence:'40%', rate:40 },
+    { stage:'見積/先方と一定の目合わせ済み', confidence:'60%', rate:60 },
+    { stage:'稟議・社内検討/検討段階かを把握、進捗を把握', confidence:'70%', rate:70 },
+    { stage:'最終クロージング/条件等の最終詰め実施', confidence:'90%', rate:90 },
+    { stage:'受注/稼働確定、注文書済み', confidence:'100%', rate:100 },
+  ];
+  function stageInfo(label){ return STAGES.find(s=>s.stage===label) || {stage:label||'—',confidence:'—',rate:0}; }
+
   async function loadCompanies(){
     const { data, error } = await window.__SUPA
       .from('companies')
-      .select('id,name,industry,company_logs(id,log_date,owner_email,progress,progress_text,proposal,next_action,next_date,created_at)')
+      .select('id,name,industry,company_logs(id,log_date,owner_email,progress,stage,confidence_label,progress_text,next_action,next_date,created_at)')
       .order('id');
     if(error){ alert('データの読み込みに失敗しました：'+error.message); return []; }
     return data.map(c=>({
       id: c.id, name: c.name, industry: c.industry,
       logs: (c.company_logs||[]).slice().sort((a,b)=>a.created_at.localeCompare(b.created_at)).map(l=>({
         id: l.id, date: l.log_date, owner: l.owner_email, progress: l.progress,
-        progressText: l.progress_text, proposal: l.proposal, nextAction: l.next_action, nextDate: l.next_date
+        stage: l.stage || '（未設定）',
+        confidence: l.confidence_label || (l.stage ? stageInfo(l.stage).confidence : (l.progress!=null ? l.progress+'%' : '—')),
+        detail: l.progress_text, nextAction: l.next_action, nextDate: l.next_date
       }))
     }));
   }
@@ -371,11 +385,12 @@
         '<td>'+c.industry+'</td>'+
         '<td>'+l.owner.split('@')[0]+'</td>'+
         '<td>'+l.date+'</td>'+
-        '<td><span class="progress-bar"><i style="width:'+l.progress+'%"></i></span>'+l.progress+'%</td>'+
+        '<td>'+l.stage+'</td>'+
+        '<td><span class="pill pill-neutral">'+l.confidence+'</span></td>'+
         '<td>'+l.nextAction+'</td>'+
         '<td>'+statusPill(l.nextDate)+'</td>'+
         '</tr>';
-    }).join('') || '<tr><td colspan="7" class="empty">該当する企業がありません</td></tr>';
+    }).join('') || '<tr><td colspan="8" class="empty">該当する企業がありません</td></tr>';
     tbody.querySelectorAll('tr.row').forEach(tr=>{
       tr.addEventListener('click', ()=>openDrawer(parseInt(tr.dataset.id)));
     });
@@ -387,16 +402,10 @@
   function renderBoard(){
     const q = document.getElementById('boardSearchBox').value.trim().toLowerCase();
     const filtered = companies.filter(c=> c.name.toLowerCase().includes(q) || c.industry.toLowerCase().includes(q));
-    const buckets = [
-      {label:'着手（0〜24%）', test:p=>p<25},
-      {label:'商談中（25〜49%）', test:p=>p>=25&&p<50},
-      {label:'提案・調整（50〜99%）', test:p=>p>=50&&p<100},
-      {label:'成約（100%）', test:p=>p>=100},
-    ];
     const kanban = document.getElementById('kanbanBoard');
-    kanban.innerHTML = buckets.map(b=>{
-      const items = filtered.filter(c=> b.test(latestLog(c).progress));
-      return '<div class="kcol"><div class="kcol-head">'+b.label+'<span class="n">'+items.length+'</span></div>'+
+    kanban.innerHTML = STAGES.map(s=>{
+      const items = filtered.filter(c=> latestLog(c).stage===s.stage);
+      return '<div class="kcol"><div class="kcol-head">'+s.stage+'（'+s.confidence+'）<span class="n">'+items.length+'</span></div>'+
         items.map(c=>{
           const l = latestLog(c);
           return '<div class="kcard" data-id="'+c.id+'">'+
@@ -415,14 +424,22 @@
   document.getElementById('boardSearchBox').addEventListener('input', renderBoard);
 
   // ---- drawer ----
+  const stageOptionsHtml = '<option value="" disabled selected>選択してください</option>' +
+    STAGES.map(s=>'<option value="'+s.stage+'">'+s.stage+'</option>').join('');
+  document.getElementById('f_stage').innerHTML = stageOptionsHtml;
+  document.getElementById('f_nextaction').innerHTML = stageOptionsHtml;
+  document.getElementById('f_stage').addEventListener('change', ()=>{
+    document.getElementById('f_confidence').value = stageInfo(document.getElementById('f_stage').value).confidence;
+  });
+
   function openDrawer(id){
     activeCompanyId = id;
     const c = companies.find(x=>x.id===id);
     document.getElementById('drawerTitle').textContent = c.name + '（'+c.industry+'）';
     document.getElementById('f_date').value = todayStr();
-    document.getElementById('f_rate').value = latestLog(c).progress;
-    document.getElementById('f_progress').value='';
-    document.getElementById('f_proposal').value='';
+    document.getElementById('f_stage').value = '';
+    document.getElementById('f_confidence').value = '';
+    document.getElementById('f_detail').value='';
     document.getElementById('f_nextaction').value='';
     document.getElementById('f_nextdate').value='';
     renderHistory(c);
@@ -431,9 +448,9 @@
   function renderHistory(c){
     const el = document.getElementById('logHistory');
     el.innerHTML = c.logs.slice().reverse().map(l=>{
-      return '<div class="log-entry"><div class="meta"><span>'+l.date+'　担当: '+l.owner.split('@')[0]+'</span><span>進捗率 '+l.progress+'%</span></div>'+
-        '<div><strong>進捗内容：</strong>'+ (l.progressText||'—') +'</div>'+
-        (l.proposal? '<div><strong>提案内容：</strong>'+l.proposal+'</div>':'')+
+      return '<div class="log-entry"><div class="meta"><span>'+l.date+'　担当: '+l.owner.split('@')[0]+'</span><span>確度 '+l.confidence+'</span></div>'+
+        '<div><strong>進捗内容：</strong>'+ l.stage +'</div>'+
+        (l.detail? '<div><strong>進捗詳細：</strong>'+l.detail+'</div>':'')+
         '<div><strong>ネクストアクション：</strong>'+l.nextAction+'（'+l.nextDate+'）</div></div>';
     }).join('');
   }
@@ -447,24 +464,27 @@
   document.getElementById('saveLog').addEventListener('click', async ()=>{
     const c = companies.find(x=>x.id===activeCompanyId);
     const date = document.getElementById('f_date').value || todayStr();
-    const rate = parseInt(document.getElementById('f_rate').value||'0');
-    const progressText = document.getElementById('f_progress').value.trim();
-    const proposal = document.getElementById('f_proposal').value.trim();
-    const nextAction = document.getElementById('f_nextaction').value.trim();
+    const stage = document.getElementById('f_stage').value;
+    const detail = document.getElementById('f_detail').value.trim();
+    const nextAction = document.getElementById('f_nextaction').value;
     const nextDate = document.getElementById('f_nextdate').value;
+    if(!stage){ alert('進捗内容を選択してください'); return; }
     if(!nextAction || !nextDate){ alert('ネクストアクションとネクストアクション日は必須です'); return; }
+    const info = stageInfo(stage);
     const saveBtn = document.getElementById('saveLog');
     saveBtn.disabled = true;
     const { data, error } = await window.__SUPA.from('company_logs').insert({
-      company_id: c.id, log_date: date, owner_email: currentUser, progress: rate,
-      progress_text: progressText, proposal, next_action: nextAction, next_date: nextDate
+      company_id: c.id, log_date: date, owner_email: currentUser,
+      stage, confidence_label: info.confidence, progress: info.rate,
+      progress_text: detail, next_action: nextAction, next_date: nextDate
     }).select().single();
     saveBtn.disabled = false;
     if(error){ alert('保存に失敗しました：'+error.message); return; }
-    c.logs.push({id:data.id, date, owner:currentUser, progress:rate, progressText, proposal, nextAction, nextDate});
+    c.logs.push({id:data.id, date, owner:currentUser, progress:info.rate, stage, confidence:info.confidence, detail, nextAction, nextDate});
     renderHistory(c);
-    document.getElementById('f_progress').value='';
-    document.getElementById('f_proposal').value='';
+    document.getElementById('f_stage').value='';
+    document.getElementById('f_confidence').value='';
+    document.getElementById('f_detail').value='';
     document.getElementById('f_nextaction').value='';
     document.getElementById('f_nextdate').value='';
     renderList();
@@ -533,8 +553,7 @@
     } else if(adminTab==='deal'){
       rows.forEach(r=>{ (groups[r.c.name] = groups[r.c.name]||[]).push(r); });
     } else if(adminTab==='rate'){
-      const bucket = p => p>=100?'100%（成約）':p>=75?'75〜99%':p>=50?'50〜74%':p>=25?'25〜49%':'0〜24%';
-      rows.forEach(r=>{ const k=bucket(r.l.progress); (groups[k]=groups[k]||[]).push(r); });
+      rows.forEach(r=>{ const k=r.l.confidence+'　'+r.l.stage; (groups[k]=groups[k]||[]).push(r); });
     } else {
       rows.sort((a,b)=> a.l.nextDate.localeCompare(b.l.nextDate));
       rows.forEach(r=>{ (groups[r.l.nextDate]=groups[r.l.nextDate]||[]).push(r); });
@@ -544,18 +563,18 @@
       const items = groups[k];
       return '<div class="group-title">'+k+'（'+items.length+'件）</div>'+
         '<div class="panel"><div class="table-scroll"><table><thead><tr>'+
-        '<th>会社名</th><th>担当者</th><th>進捗率</th><th>ネクストアクション</th><th>ネクストアクション日</th>'+
+        '<th>会社名</th><th>担当者</th><th>進捗内容</th><th>確度</th><th>ネクストアクション</th><th>ネクストアクション日</th>'+
         '</tr></thead><tbody>'+
-        items.map(r=>'<tr><td>'+r.c.name+'</td><td>'+r.l.owner+'</td><td>'+r.l.progress+'%</td><td>'+r.l.nextAction+'</td><td>'+statusPill(r.l.nextDate)+'</td></tr>').join('')+
+        items.map(r=>'<tr><td>'+r.c.name+'</td><td>'+r.l.owner+'</td><td>'+r.l.stage+'</td><td>'+r.l.confidence+'</td><td>'+r.l.nextAction+'</td><td>'+statusPill(r.l.nextDate)+'</td></tr>').join('')+
         '</tbody></table></div></div>';
     }).join('') || '<div class="empty">データがありません</div>';
   }
   document.getElementById('exportBtn').addEventListener('click', ()=>{
     const rows = adminRows();
-    const header = ['会社名','業種','担当者','アプローチ日','進捗内容','進捗率','提案内容','ネクストアクション','ネクストアクション日'];
+    const header = ['会社名','業種','担当者','アプローチ日','進捗内容','確度','進捗詳細','ネクストアクション','ネクストアクション日'];
     const csvRows = [header.join(',')];
     rows.forEach(r=>{
-      const vals = [r.c.name, r.c.industry, r.l.owner, r.l.date, r.l.progressText, r.l.progress+'%', r.l.proposal, r.l.nextAction, r.l.nextDate]
+      const vals = [r.c.name, r.c.industry, r.l.owner, r.l.date, r.l.stage, r.l.confidence, r.l.detail, r.l.nextAction, r.l.nextDate]
         .map(v=> '"'+String(v||'').replace(/"/g,'""')+'"');
       csvRows.push(vals.join(','));
     });
