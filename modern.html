@@ -1,0 +1,464 @@
+<title>CRM Sample B — モダン・カンバン型</title>
+<style>
+  :root{
+    --bg:#F6F5FB; --surface:#FFFFFF; --surface-2:#EFEDF8;
+    --ink:#292A3D; --ink-soft:#767693; --border:#E4E1F2;
+    --primary:#5B4FBF; --primary-ink:#FFFFFF; --primary-soft:#ECE9FB;
+    --accent:#EF6C55; --accent-soft:#FDE9E4;
+    --mint:#22A879; --mint-soft:#E1F5EC;
+    --amber:#D9932B; --amber-soft:#FBEDD9;
+    --shadow:0 2px 10px rgba(60,50,110,.07), 0 1px 2px rgba(60,50,110,.05);
+    --radius:14px;
+    --font: -apple-system,"Hiragino Kaku Gothic ProN","Hiragino Sans","Yu Gothic","Segoe UI",Meiryo,sans-serif;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#1B1A26; --surface:#242331; --surface-2:#2C2B3B;
+      --ink:#EDECF6; --ink-soft:#9F9DB8; --border:#38364A;
+      --primary:#9C90F0; --primary-ink:#1B1A26; --primary-soft:#332F52;
+      --accent:#F0876F; --accent-soft:#402E30;
+      --mint:#4FCBA0; --mint-soft:#1E3A30;
+      --amber:#E4AC5C; --amber-soft:#3E301C;
+      --shadow:0 2px 14px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#1B1A26; --surface:#242331; --surface-2:#2C2B3B;
+    --ink:#EDECF6; --ink-soft:#9F9DB8; --border:#38364A;
+    --primary:#9C90F0; --primary-ink:#1B1A26; --primary-soft:#332F52;
+    --accent:#F0876F; --accent-soft:#402E30;
+    --mint:#4FCBA0; --mint-soft:#1E3A30;
+    --amber:#E4AC5C; --amber-soft:#3E301C;
+    --shadow:0 2px 14px rgba(0,0,0,.35);
+  }
+  :root[data-theme="light"]{
+    --bg:#F6F5FB; --surface:#FFFFFF; --surface-2:#EFEDF8;
+    --ink:#292A3D; --ink-soft:#767693; --border:#E4E1F2;
+    --primary:#5B4FBF; --primary-ink:#FFFFFF; --primary-soft:#ECE9FB;
+    --accent:#EF6C55; --accent-soft:#FDE9E4;
+    --mint:#22A879; --mint-soft:#E1F5EC;
+    --amber:#D9932B; --amber-soft:#FBEDD9;
+    --shadow:0 2px 10px rgba(60,50,110,.07), 0 1px 2px rgba(60,50,110,.05);
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:var(--font);color:var(--ink);background:var(--bg);font-size:14px;line-height:1.6;}
+  .topbar{display:flex;align-items:center;gap:24px;padding:14px 28px;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10;}
+  .brand{font-weight:800;font-size:17px;color:var(--primary);display:flex;align-items:center;gap:8px;}
+  .brand .tag{font-size:10px;font-weight:700;background:var(--primary-soft);color:var(--primary);padding:2px 8px;border-radius:100px;letter-spacing:.04em;}
+  .tabbar{display:flex;gap:4px;margin-left:8px;}
+  .tabbar .t{padding:8px 16px;border-radius:100px;font-weight:700;font-size:13px;color:var(--ink-soft);cursor:pointer;}
+  .tabbar .t.active{background:var(--primary);color:var(--primary-ink);}
+  .spacer{flex:1;}
+  .user-switch select{font-family:var(--font);font-size:13px;padding:7px 12px;border-radius:100px;border:1px solid var(--border);background:var(--surface-2);color:var(--ink);}
+  .content{max-width:1180px;margin:0 auto;padding:26px 28px 60px;}
+  .view{display:none;}
+  .view.active{display:block;}
+
+  .page-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px;}
+  .page-head h1{font-size:20px;margin:0;}
+  .search-wrap input{font-family:var(--font);font-size:13px;padding:9px 14px;border-radius:100px;border:1px solid var(--border);background:var(--surface);color:var(--ink);width:260px;}
+
+  .alert-strip{display:flex;align-items:center;gap:10px;background:var(--accent-soft);color:var(--accent);border-radius:var(--radius);padding:12px 18px;margin-bottom:20px;font-size:13px;font-weight:600;flex-wrap:wrap;}
+  .alert-strip .chip{background:var(--surface);border-radius:100px;padding:4px 12px;cursor:pointer;font-weight:700;box-shadow:var(--shadow);}
+
+  .kanban{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;}
+  .kcol-head{font-weight:800;font-size:13px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;color:var(--ink-soft);}
+  .kcol-head .n{background:var(--surface-2);border-radius:100px;padding:1px 9px;font-size:11.5px;font-variant-numeric:tabular-nums;}
+  .kcard{background:var(--surface);border-radius:var(--radius);padding:14px 15px;margin-bottom:12px;box-shadow:var(--shadow);cursor:pointer;border:1px solid transparent;transition:transform .12s ease;}
+  .kcard:hover{transform:translateY(-2px);border-color:var(--border);}
+  .kcard .cname{font-weight:800;font-size:13.5px;margin-bottom:4px;}
+  .kcard .cind{font-size:11.5px;color:var(--ink-soft);margin-bottom:10px;}
+  .kcard .bar{height:6px;border-radius:4px;background:var(--surface-2);overflow:hidden;margin-bottom:9px;}
+  .kcard .bar i{display:block;height:100%;background:var(--primary);}
+  .kcard .na{font-size:12px;margin-bottom:6px;}
+  .kcard .meta-row{display:flex;justify-content:space-between;align-items:center;}
+  .kcard .owner{font-size:11px;color:var(--ink-soft);}
+  .badge-date{font-size:11px;font-weight:700;border-radius:100px;padding:2px 9px;}
+  .badge-danger{background:var(--accent-soft);color:var(--accent);}
+  .badge-amber{background:var(--amber-soft);color:var(--amber);}
+  .badge-mint{background:var(--mint-soft);color:var(--mint);}
+  .badge-neutral{background:var(--surface-2);color:var(--ink-soft);}
+
+  .panel{background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px 20px;margin-bottom:18px;}
+  .panel h2{font-size:14px;margin:0 0 12px;}
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th{text-align:left;padding:8px 10px;color:var(--ink-soft);font-weight:700;border-bottom:1px solid var(--border);font-size:11.5px;white-space:nowrap;}
+  td{padding:9px 10px;border-bottom:1px solid var(--border);}
+  .table-scroll{overflow-x:auto;}
+
+  .btn{font-family:var(--font);font-weight:700;font-size:13px;padding:9px 16px;border-radius:100px;border:1px solid var(--border);background:var(--surface);color:var(--ink);cursor:pointer;}
+  .btn:hover{background:var(--surface-2);}
+  .btn-primary{background:var(--primary);color:var(--primary-ink);border-color:var(--primary);}
+  .btn-primary:hover{filter:brightness(1.08);}
+  .subtabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;}
+  .subtabs .st{padding:7px 14px;border-radius:100px;font-size:12.5px;font-weight:700;background:var(--surface-2);color:var(--ink-soft);cursor:pointer;}
+  .subtabs .st.active{background:var(--primary);color:var(--primary-ink);}
+
+  .modal-overlay{position:fixed;inset:0;background:rgba(35,30,60,.45);display:none;align-items:center;justify-content:center;z-index:60;padding:20px;}
+  .modal-overlay.open{display:flex;}
+  .modal{background:var(--surface);border-radius:18px;width:600px;max-width:100%;max-height:88vh;overflow-y:auto;box-shadow:0 20px 60px rgba(20,10,50,.3);}
+  .modal-head{padding:20px 24px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:var(--surface);border-radius:18px 18px 0 0;}
+  .modal-head h2{margin:0;font-size:17px;}
+  .modal-body{padding:20px 24px;}
+  .close-x{background:var(--surface-2);border:none;width:30px;height:30px;border-radius:100px;font-size:16px;color:var(--ink-soft);cursor:pointer;}
+  label{display:block;font-size:12px;color:var(--ink-soft);font-weight:700;margin-bottom:5px;}
+  input[type=text],input[type=date],input[type=number],textarea,select{
+    width:100%;font-family:var(--font);font-size:13px;padding:9px 12px;border-radius:10px;border:1px solid var(--border);background:var(--bg);color:var(--ink);
+  }
+  textarea{resize:vertical;min-height:58px;}
+  .field{margin-bottom:13px;}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:13px;}
+  .subhead{font-size:12px;font-weight:800;color:var(--primary);text-transform:uppercase;letter-spacing:.06em;margin:20px 0 10px;}
+  .log-entry{border-radius:12px;padding:12px 14px;margin-bottom:9px;background:var(--surface-2);}
+  .log-entry .meta{display:flex;justify-content:space-between;font-size:11.5px;color:var(--ink-soft);margin-bottom:5px;}
+
+  .cal-nav{display:flex;align-items:center;gap:12px;margin-bottom:16px;}
+  .cal-nav h3{margin:0;font-size:16px;min-width:120px;}
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;}
+  .cal-dow{font-size:11px;font-weight:800;color:var(--ink-soft);text-align:center;padding:4px 0;}
+  .cal-cell{min-height:92px;border-radius:10px;padding:7px;background:var(--surface-2);font-size:12px;}
+  .cal-cell.today{outline:2px solid var(--primary);}
+  .cal-cell .d{font-weight:800;color:var(--ink-soft);margin-bottom:4px;}
+  .cal-item{background:var(--accent);color:#fff;border-radius:7px;padding:2px 6px;margin-bottom:3px;font-size:11px;cursor:pointer;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .cal-item.future{background:var(--primary);}
+  .empty{color:var(--ink-soft);text-align:center;padding:24px;font-size:13px;}
+  .barchart{display:flex;align-items:flex-end;gap:14px;height:150px;padding-top:10px;}
+  .barchart .col{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:6px;}
+  .barchart .col .bv{width:100%;background:var(--primary);border-radius:8px 8px 0 0;}
+  .barchart .col .lbl{font-size:11px;color:var(--ink-soft);text-align:center;font-weight:700;}
+</style>
+
+<div class="topbar">
+  <div class="brand">◆ Palette CRM<span class="tag">SAMPLE B</span></div>
+  <div class="tabbar">
+    <div class="t active" data-nav="board">案件ボード</div>
+    <div class="t" data-nav="calendar">カレンダー</div>
+    <div class="t" data-nav="admin">管理画面</div>
+  </div>
+  <div class="spacer"></div>
+  <div class="user-switch">担当者: <select id="userSelect"></select></div>
+</div>
+
+<div class="content">
+
+  <div class="view active" id="view-board">
+    <div class="page-head">
+      <h1>案件ボード（進捗率別）</h1>
+      <div class="search-wrap"><input type="text" id="searchBox" placeholder="🔍 会社名・業種で検索"></div>
+    </div>
+    <div id="alertStrip"></div>
+    <div class="kanban" id="kanban"></div>
+  </div>
+
+  <div class="view" id="view-calendar">
+    <div class="page-head"><h1>カレンダー</h1></div>
+    <div class="panel">
+      <div class="cal-nav">
+        <button class="btn" id="calPrev">← 前月</button>
+        <h3 id="calLabel"></h3>
+        <button class="btn" id="calNext">翌月 →</button>
+        <button class="btn" id="calToday">今月へ</button>
+      </div>
+      <div class="cal-grid" id="calGrid"></div>
+    </div>
+  </div>
+
+  <div class="view" id="view-admin">
+    <div class="page-head"><h1>管理画面</h1>
+      <button class="btn btn-primary" id="exportBtn">⬇ CSVエクスポート</button>
+    </div>
+    <div class="panel">
+      <h2>進捗率の分布</h2>
+      <div class="barchart" id="barchart"></div>
+    </div>
+    <div class="subtabs">
+      <div class="st active" data-tab="person">担当者ごと</div>
+      <div class="st" data-tab="deal">案件ごと</div>
+      <div class="st" data-tab="rate">進捗率ごと</div>
+      <div class="st" data-tab="nextdate">ネクストアクション日ごと</div>
+    </div>
+    <div id="adminContent"></div>
+  </div>
+
+</div>
+
+<div class="modal-overlay" id="overlay">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 id="modalTitle">会社名</h2>
+      <button class="close-x" id="closeModal">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="subhead">新しい進捗を記録</div>
+      <div class="grid2">
+        <div class="field"><label>アプローチ日</label><input type="date" id="f_date"></div>
+        <div class="field"><label>進捗率（%）</label><input type="number" id="f_rate" min="0" max="100" step="5"></div>
+      </div>
+      <div class="field"><label>進捗内容</label><textarea id="f_progress" placeholder="どんな接触・商談を行ったか"></textarea></div>
+      <div class="field"><label>提案内容</label><textarea id="f_proposal" placeholder="提示したプラン・条件など"></textarea></div>
+      <div class="grid2">
+        <div class="field"><label>ネクストアクション</label><input type="text" id="f_nextaction" placeholder="次にやること"></div>
+        <div class="field"><label>ネクストアクション日</label><input type="date" id="f_nextdate"></div>
+      </div>
+      <button class="btn btn-primary" id="saveLog" style="width:100%;">記録する</button>
+      <div class="subhead">これまでの記録</div>
+      <div id="logHistory"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const STORE_KEY = 'nexusCrmSampleB_v1';
+  const USER_KEY = 'nexusCrmSampleB_user';
+  const todayStr = () => new Date().toISOString().slice(0,10);
+  const REPS = ['goto.s@sora1.jp','tanaka.m@sora1.jp','suzuki.k@sora1.jp','yamamoto.r@sora1.jp'];
+
+  function seed(){
+    const T = todayStr();
+    const shift = n => { const d=new Date(T); d.setDate(d.getDate()+n); return d.toISOString().slice(0,10); };
+    return [
+      {id:1,name:'株式会社アオイ商事',industry:'商社',logs:[
+        {date:shift(-20),owner:REPS[0],progress:20,progressText:'代表電話にて初回コンタクト。担当部署を確認。',proposal:'',nextAction:'資料一式を送付する',nextDate:shift(-15)},
+        {date:shift(-10),owner:REPS[0],progress:45,progressText:'資料送付後、購買部の田中様と電話で要件確認。',proposal:'標準プラン＋導入サポートを提案',nextAction:'見積書を提出する',nextDate:shift(-2)},
+      ]},
+      {id:2,name:'田中精密工業株式会社',industry:'製造業',logs:[
+        {date:shift(-30),owner:REPS[1],progress:60,progressText:'工場見学を実施。現場の課題をヒアリング。',proposal:'生産管理オプションを含むプランを提案',nextAction:'役員への提案プレゼンを実施する',nextDate:shift(0)},
+      ]},
+      {id:3,name:'未来フードサービス株式会社',industry:'飲食',logs:[
+        {date:shift(-5),owner:REPS[2],progress:10,progressText:'展示会にて名刺交換。興味ありとの反応。',proposal:'',nextAction:'御礼メールとオンライン説明会の案内を送る',nextDate:shift(1)},
+      ]},
+      {id:4,name:'グリーンリーフ物流株式会社',industry:'物流',logs:[
+        {date:shift(-40),owner:REPS[0],progress:80,progressText:'複数回の商談を経て稟議申請中との連絡あり。',proposal:'年間契約プラン（10%割引）を提示',nextAction:'稟議の進捗を確認する',nextDate:shift(3)},
+      ]},
+      {id:5,name:'ハヤシデザイン合同会社',industry:'デザイン',logs:[
+        {date:shift(-8),owner:REPS[3],progress:30,progressText:'代表の林様とオンラインで初回面談。',proposal:'',nextAction:'トライアルアカウントを発行する',nextDate:shift(-1)},
+      ]},
+      {id:6,name:'桜井建設株式会社',industry:'建設',logs:[
+        {date:shift(-60),owner:REPS[1],progress:100,progressText:'契約締結完了。導入作業に移行。',proposal:'導入済み',nextAction:'導入後1ヶ月フォローアップ',nextDate:shift(6)},
+      ]},
+      {id:7,name:'ノヴァテック株式会社',industry:'IT',logs:[
+        {date:shift(-3),owner:REPS[2],progress:15,progressText:'問い合わせフォームより相談あり。折り返し予定。',proposal:'',nextAction:'電話でヒアリングを行う',nextDate:shift(0)},
+      ]},
+      {id:8,name:'さくらクリニックグループ',industry:'医療',logs:[
+        {date:shift(-15),owner:REPS[0],progress:50,progressText:'複数拠点への導入について院長と協議。',proposal:'マルチ拠点プランを提案',nextAction:'拠点ごとの見積を再送する',nextDate:shift(-4)},
+      ]},
+      {id:9,name:'東西流通株式会社',industry:'流通',logs:[
+        {date:shift(-25),owner:REPS[3],progress:70,progressText:'情報システム部と要件定義を実施。',proposal:'API連携オプション付きプラン',nextAction:'契約書ドラフトを送付する',nextDate:shift(2)},
+      ]},
+      {id:10,name:'ブルーウェーブITソリューションズ',industry:'IT',logs:[
+        {date:shift(-2),owner:REPS[1],progress:5,progressText:'紹介経由で初回アプローチ。担当者不明。',proposal:'',nextAction:'担当者を特定し連絡する',nextDate:shift(4)},
+      ]},
+    ];
+  }
+  function load(){
+    const raw = localStorage.getItem(STORE_KEY);
+    if(raw){ try{ return JSON.parse(raw);}catch(e){} }
+    const s = seed(); localStorage.setItem(STORE_KEY, JSON.stringify(s)); return s;
+  }
+  function save(data){ localStorage.setItem(STORE_KEY, JSON.stringify(data)); }
+
+  let companies = load();
+  let currentUser = localStorage.getItem(USER_KEY) || 'goto.s@sora1.jp';
+  let activeCompanyId = null;
+  let calDate = new Date();
+
+  function latestLog(c){ return c.logs[c.logs.length-1]; }
+  function daysDiff(dateStr){
+    const d = new Date(dateStr+'T00:00:00'); const t = new Date(todayStr()+'T00:00:00');
+    return Math.round((d-t)/86400000);
+  }
+  function dateBadge(dateStr){
+    const diff = daysDiff(dateStr);
+    if(diff<0) return '<span class="badge-date badge-danger">期限超過 '+Math.abs(diff)+'日</span>';
+    if(diff===0) return '<span class="badge-date badge-amber">本日期限</span>';
+    if(diff<=3) return '<span class="badge-date badge-neutral">あと'+diff+'日</span>';
+    return '<span class="badge-date badge-mint">'+dateStr+'</span>';
+  }
+
+  document.querySelectorAll('.tabbar .t').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      document.querySelectorAll('.tabbar .t').forEach(n=>n.classList.remove('active'));
+      el.classList.add('active');
+      const nav = el.dataset.nav;
+      document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+      document.getElementById('view-'+nav).classList.add('active');
+      if(nav==='calendar') renderCalendar();
+      if(nav==='admin') renderAdmin();
+    });
+  });
+
+  const userSelect = document.getElementById('userSelect');
+  REPS.forEach(r=>{ const o=document.createElement('option'); o.value=r; o.textContent=r; userSelect.appendChild(o); });
+  userSelect.value=currentUser;
+  userSelect.addEventListener('change', ()=>{ currentUser=userSelect.value; localStorage.setItem(USER_KEY,currentUser); renderAdmin(); });
+
+  function renderAlertStrip(){
+    const overdue = companies.filter(c=>daysDiff(latestLog(c).nextDate)<=0);
+    const el = document.getElementById('alertStrip');
+    if(overdue.length===0){ el.innerHTML=''; return; }
+    el.innerHTML = '<div class="alert-strip">⚠ 本日期限・期限超過のネクストアクションが '+overdue.length+' 件あります　'+
+      overdue.map(c=>'<span class="chip" data-id="'+c.id+'">'+c.name+'</span>').join('')+'</div>';
+    el.querySelectorAll('.chip').forEach(chip=> chip.addEventListener('click', ()=>openModal(parseInt(chip.dataset.id))));
+  }
+
+  function renderBoard(){
+    const q = document.getElementById('searchBox').value.trim().toLowerCase();
+    const filtered = companies.filter(c=> c.name.toLowerCase().includes(q) || c.industry.toLowerCase().includes(q));
+    const buckets = [
+      {key:'0-24', label:'着手（0〜24%）', test:p=>p<25},
+      {key:'25-49', label:'商談中（25〜49%）', test:p=>p>=25&&p<50},
+      {key:'50-99', label:'提案・調整（50〜99%）', test:p=>p>=50&&p<100},
+      {key:'100', label:'成約（100%）', test:p=>p>=100},
+    ];
+    const kanban = document.getElementById('kanban');
+    kanban.innerHTML = buckets.map(b=>{
+      const items = filtered.filter(c=> b.test(latestLog(c).progress));
+      return '<div class="kcol"><div class="kcol-head">'+b.label+'<span class="n">'+items.length+'</span></div>'+
+        items.map(c=>{
+          const l = latestLog(c);
+          return '<div class="kcard" data-id="'+c.id+'">'+
+            '<div class="cname">'+c.name+'</div><div class="cind">'+c.industry+'</div>'+
+            '<div class="bar"><i style="width:'+l.progress+'%"></i></div>'+
+            '<div class="na">▸ '+l.nextAction+'</div>'+
+            '<div class="meta-row"><span class="owner">'+l.owner.split('@')[0]+'</span>'+dateBadge(l.nextDate)+'</div>'+
+            '</div>';
+        }).join('') + (items.length===0?'<div class="empty" style="padding:12px;">なし</div>':'') +
+        '</div>';
+    }).join('');
+    kanban.querySelectorAll('.kcard').forEach(card=>{
+      card.addEventListener('click', ()=> openModal(parseInt(card.dataset.id)));
+    });
+    renderAlertStrip();
+  }
+  document.getElementById('searchBox').addEventListener('input', renderBoard);
+
+  function openModal(id){
+    activeCompanyId = id;
+    const c = companies.find(x=>x.id===id);
+    document.getElementById('modalTitle').textContent = c.name+'（'+c.industry+'）';
+    document.getElementById('f_date').value = todayStr();
+    document.getElementById('f_rate').value = latestLog(c).progress;
+    document.getElementById('f_progress').value='';
+    document.getElementById('f_proposal').value='';
+    document.getElementById('f_nextaction').value='';
+    document.getElementById('f_nextdate').value='';
+    renderHistory(c);
+    document.getElementById('overlay').classList.add('open');
+  }
+  function renderHistory(c){
+    document.getElementById('logHistory').innerHTML = c.logs.slice().reverse().map(l=>{
+      return '<div class="log-entry"><div class="meta"><span>'+l.date+' ・ '+l.owner.split('@')[0]+'</span><span>進捗率 '+l.progress+'%</span></div>'+
+        '<div><strong>進捗：</strong>'+(l.progressText||'—')+'</div>'+
+        (l.proposal?'<div><strong>提案：</strong>'+l.proposal+'</div>':'')+
+        '<div><strong>次のアクション：</strong>'+l.nextAction+'（'+l.nextDate+'）</div></div>';
+    }).join('');
+  }
+  document.getElementById('closeModal').addEventListener('click', ()=>{ document.getElementById('overlay').classList.remove('open'); renderBoard(); });
+  document.getElementById('overlay').addEventListener('click', e=>{ if(e.target.id==='overlay'){ document.getElementById('overlay').classList.remove('open'); renderBoard(); } });
+  document.getElementById('saveLog').addEventListener('click', ()=>{
+    const c = companies.find(x=>x.id===activeCompanyId);
+    const date = document.getElementById('f_date').value || todayStr();
+    const rate = parseInt(document.getElementById('f_rate').value||'0');
+    const progressText = document.getElementById('f_progress').value.trim();
+    const proposal = document.getElementById('f_proposal').value.trim();
+    const nextAction = document.getElementById('f_nextaction').value.trim();
+    const nextDate = document.getElementById('f_nextdate').value;
+    if(!nextAction || !nextDate){ alert('ネクストアクションとネクストアクション日は必須です'); return; }
+    c.logs.push({date,owner:currentUser,progress:rate,progressText,proposal,nextAction,nextDate});
+    save(companies);
+    renderHistory(c);
+    ['f_progress','f_proposal','f_nextaction','f_nextdate'].forEach(id=>document.getElementById(id).value='');
+  });
+
+  function renderCalendar(){
+    const y=calDate.getFullYear(), m=calDate.getMonth();
+    document.getElementById('calLabel').textContent = y+'年'+(m+1)+'月';
+    const first = new Date(y,m,1); const startDow = first.getDay();
+    const daysInMonth = new Date(y,m+1,0).getDate();
+    const grid = document.getElementById('calGrid'); grid.innerHTML='';
+    ['日','月','火','水','木','金','土'].forEach(d=>{ const el=document.createElement('div'); el.className='cal-dow'; el.textContent=d; grid.appendChild(el); });
+    for(let i=0;i<startDow;i++){ grid.appendChild(document.createElement('div')); }
+    const T = todayStr();
+    for(let day=1; day<=daysInMonth; day++){
+      const dateStr = y+'-'+String(m+1).padStart(2,'0')+'-'+String(day).padStart(2,'0');
+      const cell=document.createElement('div');
+      cell.className='cal-cell'+(dateStr===T?' today':'');
+      cell.innerHTML='<div class="d">'+day+'</div>';
+      companies.forEach(c=>{
+        const l = latestLog(c);
+        if(l.nextDate===dateStr){
+          const diff = daysDiff(l.nextDate);
+          const item=document.createElement('div');
+          item.className='cal-item'+(diff>0?' future':'');
+          item.textContent=c.name;
+          item.addEventListener('click', ()=>{ document.querySelector('.t[data-nav="board"]').click(); openModal(c.id); });
+          cell.appendChild(item);
+        }
+      });
+      grid.appendChild(cell);
+    }
+  }
+  document.getElementById('calPrev').addEventListener('click', ()=>{ calDate.setMonth(calDate.getMonth()-1); renderCalendar(); });
+  document.getElementById('calNext').addEventListener('click', ()=>{ calDate.setMonth(calDate.getMonth()+1); renderCalendar(); });
+  document.getElementById('calToday').addEventListener('click', ()=>{ calDate=new Date(); renderCalendar(); });
+
+  let adminTab='person';
+  document.querySelectorAll('.subtabs .st').forEach(t=>{
+    t.addEventListener('click', ()=>{
+      document.querySelectorAll('.subtabs .st').forEach(x=>x.classList.remove('active'));
+      t.classList.add('active'); adminTab=t.dataset.tab; renderAdmin();
+    });
+  });
+  function adminRows(){ return companies.map(c=>({c,l:latestLog(c)})); }
+  function renderBarchart(){
+    const buckets=[{k:'0-24%',t:p=>p<25},{k:'25-49%',t:p=>p>=25&&p<50},{k:'50-74%',t:p=>p>=50&&p<75},{k:'75-99%',t:p=>p>=75&&p<100},{k:'100%',t:p=>p>=100}];
+    const rows = adminRows();
+    const counts = buckets.map(b=> rows.filter(r=>b.t(r.l.progress)).length);
+    const max = Math.max(...counts,1);
+    document.getElementById('barchart').innerHTML = buckets.map((b,i)=>{
+      const h = Math.max(6, Math.round(counts[i]/max*120));
+      return '<div class="col"><div class="bv" style="height:'+h+'px"></div><div class="lbl">'+counts[i]+'件<br>'+b.k+'</div></div>';
+    }).join('');
+  }
+  function renderAdmin(){
+    renderBarchart();
+    const rows = adminRows();
+    const el = document.getElementById('adminContent');
+    let groups = {};
+    if(adminTab==='person'){ rows.forEach(r=>{ (groups[r.l.owner]=groups[r.l.owner]||[]).push(r); }); }
+    else if(adminTab==='deal'){ rows.forEach(r=>{ (groups[r.c.name]=groups[r.c.name]||[]).push(r); }); }
+    else if(adminTab==='rate'){
+      const bucket=p=>p>=100?'100%（成約）':p>=75?'75〜99%':p>=50?'50〜74%':p>=25?'25〜49%':'0〜24%';
+      rows.forEach(r=>{ const k=bucket(r.l.progress); (groups[k]=groups[k]||[]).push(r); });
+    } else {
+      rows.sort((a,b)=>a.l.nextDate.localeCompare(b.l.nextDate));
+      rows.forEach(r=>{ (groups[r.l.nextDate]=groups[r.l.nextDate]||[]).push(r); });
+    }
+    const keys = Object.keys(groups).sort();
+    el.innerHTML = keys.map(k=>{
+      const items = groups[k];
+      return '<div class="panel"><h2>'+k+'（'+items.length+'件）</h2><div class="table-scroll"><table><thead><tr>'+
+        '<th>会社名</th><th>担当者</th><th>進捗率</th><th>ネクストアクション</th><th>期日</th></tr></thead><tbody>'+
+        items.map(r=>'<tr><td>'+r.c.name+'</td><td>'+r.l.owner+'</td><td>'+r.l.progress+'%</td><td>'+r.l.nextAction+'</td><td>'+dateBadge(r.l.nextDate)+'</td></tr>').join('')+
+        '</tbody></table></div></div>';
+    }).join('') || '<div class="empty">データがありません</div>';
+  }
+  document.getElementById('exportBtn').addEventListener('click', ()=>{
+    const rows = adminRows();
+    const header=['会社名','業種','担当者','アプローチ日','進捗内容','進捗率','提案内容','ネクストアクション','ネクストアクション日'];
+    const csvRows=[header.join(',')];
+    rows.forEach(r=>{
+      const vals=[r.c.name,r.c.industry,r.l.owner,r.l.date,r.l.progressText,r.l.progress+'%',r.l.proposal,r.l.nextAction,r.l.nextDate]
+        .map(v=>'"'+String(v||'').replace(/"/g,'""')+'"');
+      csvRows.push(vals.join(','));
+    });
+    const blob = new Blob(['﻿'+csvRows.join('\r\n')], {type:'text/csv;charset=utf-8;'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href=url; a.download='crm_export_'+todayStr()+'.csv';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+  });
+
+  renderBoard();
+})();
+</script>
