@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>新規登録 — CRM プロトタイプ</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root{
+    --bg:#F5F4EF; --surface:#FFFFFF; --ink:#1E2430; --ink-soft:#5B6273;
+    --border:#DEDAD0; --primary:#223A70; --danger:#B23A2E; --danger-soft:#F7E1DD;
+    --ok:#2E7D6B; --ok-soft:#E3EFEA;
+    --font: -apple-system,"Hiragino Kaku Gothic ProN","Hiragino Sans","Yu Gothic","Segoe UI",Meiryo,sans-serif;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{ --bg:#171B22; --surface:#1E232C; --ink:#E7E9ED; --ink-soft:#9AA2B1; --border:#333A46; --primary:#7C93C9; --danger:#E28A7C; --danger-soft:#3A2320; --ok:#5FAF9A; --ok-soft:#1E2E2A; }
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg);color:var(--ink);font-family:var(--font);}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:36px 34px;width:380px;max-width:92vw;}
+  h1{font-size:17px;margin:0 0 6px;}
+  p.lead{font-size:13px;color:var(--ink-soft);margin:0 0 22px;}
+  label{display:block;font-size:12px;font-weight:600;color:var(--ink-soft);margin-bottom:6px;}
+  input{width:100%;font-family:var(--font);font-size:14px;padding:10px 12px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--ink);margin-bottom:12px;}
+  button{width:100%;font-family:var(--font);font-weight:700;font-size:14px;padding:11px;border-radius:6px;border:1px solid var(--primary);background:var(--primary);color:#fff;cursor:pointer;}
+  button:hover{filter:brightness(1.08);}
+  button:disabled{opacity:.6;cursor:default;}
+  .msg{display:none;font-size:12.5px;border-radius:6px;padding:9px 11px;margin-bottom:12px;}
+  .msg.show{display:block;}
+  .msg.error{background:var(--danger-soft);color:var(--danger);}
+  .msg.ok{background:var(--ok-soft);color:var(--ok);}
+  .hint{font-size:11.5px;color:var(--ink-soft);margin:-6px 0 14px;}
+  .switch{text-align:center;font-size:12.5px;color:var(--ink-soft);margin-top:18px;}
+  .switch a{color:var(--primary);font-weight:700;text-decoration:none;}
+</style>
+</head>
+<body>
+  <form class="card" id="signupForm">
+    <h1>Nexus CRM 新規登録</h1>
+    <p class="lead">社内メールアドレス（@sora1.jp）で登録してください。</p>
+    <div class="msg" id="msg"></div>
+    <label for="email">メールアドレス</label>
+    <input type="text" id="email" placeholder="you@sora1.jp" autocomplete="email" autofocus>
+    <label for="password">パスワード</label>
+    <input type="password" id="password" placeholder="8文字以上" autocomplete="new-password">
+    <div class="hint">8文字以上で設定してください</div>
+    <label for="password2">パスワード（確認）</label>
+    <input type="password" id="password2" placeholder="もう一度入力" autocomplete="new-password">
+    <button type="submit" id="submitBtn">登録する</button>
+    <div class="switch">すでにアカウントをお持ちの方は <a href="login.html">ログイン</a></div>
+  </form>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  const SUPABASE_URL = 'https://qaoovyinizzwhfahcowz.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_HiBSZiuR9ZzHw67YloMvcw__vzYPm5S';
+  const ALLOWED_DOMAIN = 'sora1.jp';
+  const client = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  const form = document.getElementById('signupForm');
+  const emailInput = document.getElementById('email');
+  const passwordInput = document.getElementById('password');
+  const password2Input = document.getElementById('password2');
+  const msgBox = document.getElementById('msg');
+  const submitBtn = document.getElementById('submitBtn');
+
+  function showMsg(text, kind){
+    msgBox.textContent = text;
+    msgBox.className = 'msg show ' + kind;
+  }
+
+  form.addEventListener('submit', async function(e){
+    e.preventDefault();
+    const email = emailInput.value.trim().toLowerCase();
+    const password = passwordInput.value;
+    const password2 = password2Input.value;
+
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ showMsg('メールアドレスの形式が正しくありません', 'error'); return; }
+    if(email.split('@')[1] !== ALLOWED_DOMAIN){ showMsg('@' + ALLOWED_DOMAIN + ' のメールアドレスのみ登録できます', 'error'); return; }
+    if(password.length < 8){ showMsg('パスワードは8文字以上にしてください', 'error'); return; }
+    if(password !== password2){ showMsg('パスワードが一致しません', 'error'); return; }
+
+    submitBtn.disabled = true; submitBtn.textContent = '登録中…';
+    const { data, error } = await client.auth.signUp({ email, password });
+    submitBtn.disabled = false; submitBtn.textContent = '登録する';
+
+    if(error){ showMsg('登録に失敗しました：' + error.message, 'error'); return; }
+
+    if(data.session){
+      showMsg('登録が完了しました。アプリに移動します…', 'ok');
+      setTimeout(()=>{ location.href = 'index.html'; }, 800);
+    } else {
+      showMsg('確認メールを送信しました。メール内のリンクをクリックしてから、ログイン画面に進んでください。', 'ok');
+    }
+  });
+</script>
+</body>
+</html>

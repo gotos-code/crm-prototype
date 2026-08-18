@@ -1,4 +1,29 @@
 <title>CRM Sample B — モダン・カンバン型</title>
+<div id="authGate" style="position:fixed;inset:0;background:#F6F5FB;z-index:9999;display:flex;align-items:center;justify-content:center;font-family:-apple-system,'Hiragino Kaku Gothic ProN','Hiragino Sans','Yu Gothic',sans-serif;">
+  <div id="authGateContent" style="display:none;text-align:center;max-width:340px;padding:20px;">
+    <h2 style="font-size:16px;margin:0 0 10px;color:#292A3D;">承認待ちです</h2>
+    <p style="font-size:13px;color:#767693;margin:0 0 18px;">管理者の承認が完了すると利用できるようになります。しばらくしてからもう一度お試しください。</p>
+    <button id="authGateLogout" style="font-family:inherit;font-weight:700;font-size:13px;padding:9px 18px;border-radius:100px;border:1px solid #5B4FBF;background:#5B4FBF;color:#fff;cursor:pointer;">ログアウト</button>
+  </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  window.__SUPA = window.supabase.createClient('https://qaoovyinizzwhfahcowz.supabase.co','sb_publishable_HiBSZiuR9ZzHw67YloMvcw__vzYPm5S');
+  window.__CRM_AUTH_PROMISE = (async function(){
+    const { data: sessionData } = await window.__SUPA.auth.getSession();
+    if(!sessionData.session){ location.href='login.html'; throw new Error('no session'); }
+    const uid = sessionData.session.user.id;
+    const { data: profile, error } = await window.__SUPA.from('profiles').select('email,approved,is_admin').eq('id', uid).single();
+    if(error || !profile || !profile.approved){
+      document.getElementById('authGateContent').style.display='block';
+      document.getElementById('authGateLogout').addEventListener('click', async ()=>{ await window.__SUPA.auth.signOut(); location.href='login.html'; });
+      throw new Error('not approved');
+    }
+    window.__CRM_USER_EMAIL = profile.email;
+    window.__CRM_IS_ADMIN = !!profile.is_admin;
+    document.getElementById('authGate').remove();
+  })();
+</script>
 <style>
   :root{
     --bg:#F6F5FB; --surface:#FFFFFF; --surface-2:#EFEDF8;
@@ -136,7 +161,7 @@
     <div class="t" data-nav="admin">管理画面</div>
   </div>
   <div class="spacer"></div>
-  <div class="user-switch">担当者: <select id="userSelect"></select></div>
+  <div class="user-switch">担当者: <select id="userSelect"></select> <button class="btn" id="logoutBtn" type="button" style="margin-left:6px;">ログアウト</button></div>
 </div>
 
 <div class="content">
@@ -208,11 +233,13 @@
 </div>
 
 <script>
-(function(){
+(async function(){
+  await window.__CRM_AUTH_PROMISE;
   const STORE_KEY = 'nexusCrmSampleB_v1';
   const USER_KEY = 'nexusCrmSampleB_user';
   const todayStr = () => new Date().toISOString().slice(0,10);
   const REPS = ['goto.s@sora1.jp','tanaka.m@sora1.jp','suzuki.k@sora1.jp','yamamoto.r@sora1.jp'];
+  if(window.__CRM_USER_EMAIL && !REPS.includes(window.__CRM_USER_EMAIL)) REPS.unshift(window.__CRM_USER_EMAIL);
 
   function seed(){
     const T = todayStr();
@@ -259,7 +286,7 @@
   function save(data){ localStorage.setItem(STORE_KEY, JSON.stringify(data)); }
 
   let companies = load();
-  let currentUser = localStorage.getItem(USER_KEY) || 'goto.s@sora1.jp';
+  let currentUser = window.__CRM_USER_EMAIL || localStorage.getItem(USER_KEY) || REPS[0];
   let activeCompanyId = null;
   let calDate = new Date();
 
@@ -292,6 +319,14 @@
   REPS.forEach(r=>{ const o=document.createElement('option'); o.value=r; o.textContent=r; userSelect.appendChild(o); });
   userSelect.value=currentUser;
   userSelect.addEventListener('change', ()=>{ currentUser=userSelect.value; localStorage.setItem(USER_KEY,currentUser); renderAdmin(); });
+  document.getElementById('logoutBtn').addEventListener('click', async ()=>{ await window.__SUPA.auth.signOut(); location.href='login.html'; });
+  if(window.__CRM_IS_ADMIN){
+    const adminLink = document.createElement('a');
+    adminLink.href = 'admin.html';
+    adminLink.textContent = '⚙ 承認管理';
+    adminLink.style.cssText = 'font-size:12px;color:var(--ink-soft);text-decoration:none;margin-left:10px;';
+    document.querySelector('.user-switch').appendChild(adminLink);
+  }
 
   function renderAlertStrip(){
     const overdue = companies.filter(c=>daysDiff(latestLog(c).nextDate)<=0);
