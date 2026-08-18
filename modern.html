@@ -235,57 +235,27 @@
 <script>
 (async function(){
   await window.__CRM_AUTH_PROMISE;
-  const STORE_KEY = 'nexusCrmSampleB_v1';
   const USER_KEY = 'nexusCrmSampleB_user';
   const todayStr = () => new Date().toISOString().slice(0,10);
   const REPS = ['goto.s@sora1.jp','tanaka.m@sora1.jp','suzuki.k@sora1.jp','yamamoto.r@sora1.jp'];
   if(window.__CRM_USER_EMAIL && !REPS.includes(window.__CRM_USER_EMAIL)) REPS.unshift(window.__CRM_USER_EMAIL);
 
-  function seed(){
-    const T = todayStr();
-    const shift = n => { const d=new Date(T); d.setDate(d.getDate()+n); return d.toISOString().slice(0,10); };
-    return [
-      {id:1,name:'株式会社アオイ商事',industry:'商社',logs:[
-        {date:shift(-20),owner:REPS[0],progress:20,progressText:'代表電話にて初回コンタクト。担当部署を確認。',proposal:'',nextAction:'資料一式を送付する',nextDate:shift(-15)},
-        {date:shift(-10),owner:REPS[0],progress:45,progressText:'資料送付後、購買部の田中様と電話で要件確認。',proposal:'標準プラン＋導入サポートを提案',nextAction:'見積書を提出する',nextDate:shift(-2)},
-      ]},
-      {id:2,name:'田中精密工業株式会社',industry:'製造業',logs:[
-        {date:shift(-30),owner:REPS[1],progress:60,progressText:'工場見学を実施。現場の課題をヒアリング。',proposal:'生産管理オプションを含むプランを提案',nextAction:'役員への提案プレゼンを実施する',nextDate:shift(0)},
-      ]},
-      {id:3,name:'未来フードサービス株式会社',industry:'飲食',logs:[
-        {date:shift(-5),owner:REPS[2],progress:10,progressText:'展示会にて名刺交換。興味ありとの反応。',proposal:'',nextAction:'御礼メールとオンライン説明会の案内を送る',nextDate:shift(1)},
-      ]},
-      {id:4,name:'グリーンリーフ物流株式会社',industry:'物流',logs:[
-        {date:shift(-40),owner:REPS[0],progress:80,progressText:'複数回の商談を経て稟議申請中との連絡あり。',proposal:'年間契約プラン（10%割引）を提示',nextAction:'稟議の進捗を確認する',nextDate:shift(3)},
-      ]},
-      {id:5,name:'ハヤシデザイン合同会社',industry:'デザイン',logs:[
-        {date:shift(-8),owner:REPS[3],progress:30,progressText:'代表の林様とオンラインで初回面談。',proposal:'',nextAction:'トライアルアカウントを発行する',nextDate:shift(-1)},
-      ]},
-      {id:6,name:'桜井建設株式会社',industry:'建設',logs:[
-        {date:shift(-60),owner:REPS[1],progress:100,progressText:'契約締結完了。導入作業に移行。',proposal:'導入済み',nextAction:'導入後1ヶ月フォローアップ',nextDate:shift(6)},
-      ]},
-      {id:7,name:'ノヴァテック株式会社',industry:'IT',logs:[
-        {date:shift(-3),owner:REPS[2],progress:15,progressText:'問い合わせフォームより相談あり。折り返し予定。',proposal:'',nextAction:'電話でヒアリングを行う',nextDate:shift(0)},
-      ]},
-      {id:8,name:'さくらクリニックグループ',industry:'医療',logs:[
-        {date:shift(-15),owner:REPS[0],progress:50,progressText:'複数拠点への導入について院長と協議。',proposal:'マルチ拠点プランを提案',nextAction:'拠点ごとの見積を再送する',nextDate:shift(-4)},
-      ]},
-      {id:9,name:'東西流通株式会社',industry:'流通',logs:[
-        {date:shift(-25),owner:REPS[3],progress:70,progressText:'情報システム部と要件定義を実施。',proposal:'API連携オプション付きプラン',nextAction:'契約書ドラフトを送付する',nextDate:shift(2)},
-      ]},
-      {id:10,name:'ブルーウェーブITソリューションズ',industry:'IT',logs:[
-        {date:shift(-2),owner:REPS[1],progress:5,progressText:'紹介経由で初回アプローチ。担当者不明。',proposal:'',nextAction:'担当者を特定し連絡する',nextDate:shift(4)},
-      ]},
-    ];
+  async function loadCompanies(){
+    const { data, error } = await window.__SUPA
+      .from('companies')
+      .select('id,name,industry,company_logs(id,log_date,owner_email,progress,progress_text,proposal,next_action,next_date,created_at)')
+      .order('id');
+    if(error){ alert('データの読み込みに失敗しました：'+error.message); return []; }
+    return data.map(c=>({
+      id: c.id, name: c.name, industry: c.industry,
+      logs: (c.company_logs||[]).slice().sort((a,b)=>a.created_at.localeCompare(b.created_at)).map(l=>({
+        id: l.id, date: l.log_date, owner: l.owner_email, progress: l.progress,
+        progressText: l.progress_text, proposal: l.proposal, nextAction: l.next_action, nextDate: l.next_date
+      }))
+    }));
   }
-  function load(){
-    const raw = localStorage.getItem(STORE_KEY);
-    if(raw){ try{ return JSON.parse(raw);}catch(e){} }
-    const s = seed(); localStorage.setItem(STORE_KEY, JSON.stringify(s)); return s;
-  }
-  function save(data){ localStorage.setItem(STORE_KEY, JSON.stringify(data)); }
 
-  let companies = load();
+  let companies = [];
   let currentUser = window.__CRM_USER_EMAIL || localStorage.getItem(USER_KEY) || REPS[0];
   let activeCompanyId = null;
   let calDate = new Date();
@@ -391,7 +361,7 @@
   }
   document.getElementById('closeModal').addEventListener('click', ()=>{ document.getElementById('overlay').classList.remove('open'); renderBoard(); });
   document.getElementById('overlay').addEventListener('click', e=>{ if(e.target.id==='overlay'){ document.getElementById('overlay').classList.remove('open'); renderBoard(); } });
-  document.getElementById('saveLog').addEventListener('click', ()=>{
+  document.getElementById('saveLog').addEventListener('click', async ()=>{
     const c = companies.find(x=>x.id===activeCompanyId);
     const date = document.getElementById('f_date').value || todayStr();
     const rate = parseInt(document.getElementById('f_rate').value||'0');
@@ -400,10 +370,18 @@
     const nextAction = document.getElementById('f_nextaction').value.trim();
     const nextDate = document.getElementById('f_nextdate').value;
     if(!nextAction || !nextDate){ alert('ネクストアクションとネクストアクション日は必須です'); return; }
-    c.logs.push({date,owner:currentUser,progress:rate,progressText,proposal,nextAction,nextDate});
-    save(companies);
+    const saveBtn = document.getElementById('saveLog');
+    saveBtn.disabled = true;
+    const { data, error } = await window.__SUPA.from('company_logs').insert({
+      company_id: c.id, log_date: date, owner_email: currentUser, progress: rate,
+      progress_text: progressText, proposal, next_action: nextAction, next_date: nextDate
+    }).select().single();
+    saveBtn.disabled = false;
+    if(error){ alert('保存に失敗しました：'+error.message); return; }
+    c.logs.push({id:data.id, date, owner:currentUser, progress:rate, progressText, proposal, nextAction, nextDate});
     renderHistory(c);
     ['f_progress','f_proposal','f_nextaction','f_nextdate'].forEach(id=>document.getElementById(id).value='');
+    renderBoard();
   });
 
   function renderCalendar(){
@@ -494,6 +472,7 @@
     document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
   });
 
+  companies = await loadCompanies();
   renderBoard();
 })();
 </script>
