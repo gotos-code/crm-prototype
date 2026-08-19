@@ -2,21 +2,10 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<title>CRM プロトタイプ一覧</title>
+<title>Nexus CRM</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
-  body{font-family:-apple-system,"Hiragino Kaku Gothic ProN","Hiragino Sans","Yu Gothic",sans-serif;background:#F5F4EF;color:#1E2430;margin:0;padding:60px 20px;}
-  .wrap{max-width:640px;margin:0 auto;}
-  h1{font-size:22px;margin-bottom:8px;}
-  p.lead{color:#5B6273;margin-bottom:32px;}
-  a.card{display:block;background:#fff;border:1px solid #DEDAD0;border-radius:10px;padding:20px 22px;margin-bottom:16px;text-decoration:none;color:inherit;}
-  a.card:hover{border-color:#223A70;}
-  a.card h2{margin:0 0 6px;font-size:16px;color:#223A70;}
-  a.card p{margin:0;font-size:13px;color:#5B6273;}
-  .topline{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
-  .who{font-size:12.5px;color:#5B6273;}
-  .logout{font-size:12.5px;color:#223A70;font-weight:700;background:none;border:none;cursor:pointer;padding:0;}
-  #authGate{position:fixed;inset:0;background:#F5F4EF;z-index:9999;display:flex;align-items:center;justify-content:center;}
+  body{font-family:-apple-system,"Hiragino Kaku Gothic ProN","Hiragino Sans","Yu Gothic",sans-serif;background:#F5F4EF;color:#1E2430;margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;}
   #authGateContent{display:none;text-align:center;max-width:340px;padding:20px;}
   #authGateContent h2{font-size:16px;margin:0 0 10px;color:#1E2430;}
   #authGateContent p{font-size:13px;color:#5B6273;margin:0 0 18px;}
@@ -24,59 +13,28 @@
 </style>
 </head>
 <body>
-<div id="authGate">
-  <div id="authGateContent">
-    <h2>承認待ちです</h2>
-    <p>管理者の承認が完了すると利用できるようになります。しばらくしてからもう一度お試しください。</p>
-    <button id="authGateLogout">ログアウト</button>
-  </div>
-</div>
-<div class="wrap">
-  <div class="topline">
-    <span class="who" id="whoami"></span>
-    <button class="logout" id="logoutBtn">ログアウト</button>
-  </div>
-  <h1>CRM プロトタイプ</h1>
-  <p class="lead">サンプル比較用のページです。それぞれクリックして開けます。</p>
-  <a class="card" href="standard.html">
-    <h2>スタンダード業務型</h2>
-    <p>サイドバー＋テーブル中心。会社一覧・案件ボード・カレンダー・管理画面。</p>
-  </a>
-  <a class="card" href="modern.html">
-    <h2>モダン・カンバン型</h2>
-    <p>進捗率別のカンバンボードが中心。カード型UI、カレンダー、管理画面。</p>
-  </a>
+<div id="authGateContent">
+  <h2>承認待ちです</h2>
+  <p>管理者の承認が完了すると利用できるようになります。しばらくしてからもう一度お試しください。</p>
+  <button id="authGateLogout">ログアウト</button>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
   const SUPABASE_URL = 'https://qoaovyinizzwhfahcowz.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_HiBSZiuR9ZzHw67YloMvcw__vzYPm5S';
   const client = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-  window.__SUPA = client;
   (async function(){
     const { data: sessionData } = await client.auth.getSession();
     if(!sessionData.session){ location.href = 'login.html'; return; }
     const uid = sessionData.session.user.id;
-    const { data: profile, error } = await client.from('profiles').select('email,approved,is_admin').eq('id', uid).single();
+    const { data: profile, error } = await client.from('profiles').select('approved').eq('id', uid).single();
     if(error || !profile || !profile.approved){
       document.getElementById('authGateContent').style.display='block';
       document.getElementById('authGateLogout').addEventListener('click', async ()=>{ await client.auth.signOut(); location.href='login.html'; });
       return;
     }
-    document.getElementById('whoami').textContent = profile.email;
-    if(profile.is_admin){
-      const adminLink = document.createElement('a');
-      adminLink.href = 'admin.html';
-      adminLink.textContent = '⚙ 承認管理';
-      adminLink.style.cssText = 'font-size:12.5px;color:#223A70;font-weight:700;text-decoration:none;margin-left:12px;';
-      document.getElementById('whoami').after(adminLink);
-    }
-    document.getElementById('authGate').remove();
+    location.href = 'standard.html';
   })();
-  document.getElementById('logoutBtn').addEventListener('click', async ()=>{
-    await client.auth.signOut();
-    location.href = 'login.html';
-  });
 </script>
 </body>
 </html>
