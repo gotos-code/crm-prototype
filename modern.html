@@ -275,7 +275,17 @@
       <button class="close-x" id="closeModal">✕</button>
     </div>
     <div class="modal-body">
-      <div class="subhead">新しい進捗を記録</div>
+      <div class="subhead">会社情報</div>
+      <div class="grid2">
+        <div class="field"><label>会社名</label><input type="text" id="f_companyname"></div>
+        <div class="field"><label>業種</label><select id="f_companyindustry"></select></div>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:6px;">
+        <button class="btn" id="saveCompanyInfo" type="button">会社情報を更新</button>
+        <button class="btn" id="deleteCompanyBtn" type="button" style="color:var(--accent);border-color:var(--accent);">この会社を削除</button>
+      </div>
+
+      <div class="subhead" id="logFormTitle">新しい進捗を記録</div>
       <div class="field"><label>アプローチ日</label><input type="date" id="f_date"></div>
       <div class="grid2">
         <div class="field"><label>進捗内容</label><select id="f_stage"></select></div>
@@ -301,7 +311,10 @@
         </div>
         <div class="field"><label>売上見込</label><input type="text" id="f_revenue" readonly disabled></div>
       </div>
-      <button class="btn btn-primary" id="saveLog" style="width:100%;">記録する</button>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-primary" id="saveLog" style="flex:1;">記録する</button>
+        <button class="btn" id="cancelEditLog" type="button" style="display:none;">編集をキャンセル</button>
+      </div>
       <div class="subhead">これまでの記録</div>
       <div id="logHistory"></div>
     </div>
@@ -384,6 +397,7 @@
   let companies = [];
   let currentUser = window.__CRM_USER_EMAIL || localStorage.getItem(USER_KEY) || REPS[0];
   let activeCompanyId = null;
+  let editingLogId = null;
   let calDate = new Date();
 
   function latestLog(c){ return c.logs[c.logs.length-1]; }
@@ -681,10 +695,11 @@
     document.getElementById('f_revenue').value = formatYen(calcRevenue(document.getElementById('f_hours').value));
   });
 
-  function openModal(id){
-    activeCompanyId = id;
-    const c = companies.find(x=>x.id===id);
-    document.getElementById('modalTitle').textContent = c.name+'（'+c.industry+'）';
+  function resetLogForm(){
+    editingLogId = null;
+    document.getElementById('logFormTitle').textContent = '新しい進捗を記録';
+    document.getElementById('saveLog').textContent = '記録する';
+    document.getElementById('cancelEditLog').style.display = 'none';
     document.getElementById('f_date').value = todayStr();
     document.getElementById('f_stage').value = '';
     const confInput = document.getElementById('f_confidence');
@@ -697,22 +712,94 @@
     document.getElementById('f_hours').value='';
     document.getElementById('f_revenue').value='';
     updateNextActionVisibility();
+  }
+  function openModal(id){
+    activeCompanyId = id;
+    const c = companies.find(x=>x.id===id);
+    document.getElementById('modalTitle').textContent = c.name+'（'+c.industry+'）';
+    document.getElementById('f_companyname').value = c.name;
+    document.getElementById('f_companyindustry').innerHTML = industryOptionsHtml(c.industry);
+    resetLogForm();
     renderHistory(c);
     document.getElementById('overlay').classList.add('open');
   }
   function renderHistory(c){
-    document.getElementById('logHistory').innerHTML = c.logs.slice().reverse().map(l=>{
+    const el = document.getElementById('logHistory');
+    el.innerHTML = c.logs.slice().reverse().map(l=>{
       return '<div class="log-entry"><div class="meta"><span>'+l.date+' ・ '+l.owner.split('@')[0]+'</span><span>確度 '+l.confidence+'</span></div>'+
         '<div><strong>進捗内容：</strong>'+l.stage+'</div>'+
         (l.detail?'<div><strong>進捗詳細：</strong>'+l.detail+'</div>':'')+
         (l.nextAction? '<div><strong>次のアクション：</strong>'+l.nextAction+'（'+l.nextDate+'）</div>':'<div><strong>次のアクション：</strong>不要（受注・失注）</div>')+
         '<div><strong>先方担当者：</strong>'+(l.contactName||'—')+'（'+(l.contactInfo||'—')+'）</div>'+
         '<div><strong>稼働見込：</strong>'+(l.expectedHours!=null?l.expectedHours+'時間':'—')+'　<strong>売上見込：</strong>'+(l.expectedRevenue!=null?formatYen(l.expectedRevenue):'—')+'</div>'+
+        '<div style="margin-top:8px;"><button class="btn" id="editBtn-' + l.id + '" data-id="'+l.id+'" type="button">編集</button> '+
+        '<button class="btn log-delete-btn" data-id="'+l.id+'" type="button" style="color:var(--accent);border-color:var(--accent);">削除</button></div>'+
         '</div>';
     }).join('');
+    el.querySelectorAll('[id^="editBtn-"]').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const log = c.logs.find(x=>String(x.id)===btn.dataset.id);
+        if(!log) return;
+        editingLogId = log.id;
+        document.getElementById('logFormTitle').textContent = 'この記録を編集';
+        document.getElementById('saveLog').textContent = '更新する';
+        document.getElementById('cancelEditLog').style.display = '';
+        document.getElementById('f_date').value = log.date;
+        document.getElementById('f_stage').value = STAGES.find(s=>s.stage===log.stage) ? log.stage : OTHER_STAGE;
+        const confInput = document.getElementById('f_confidence');
+        if(document.getElementById('f_stage').value===OTHER_STAGE){
+          confInput.value = log.confidence; confInput.readOnly=false; confInput.disabled=false;
+        } else {
+          confInput.value = stageInfo(log.stage).confidence; confInput.readOnly=true; confInput.disabled=true;
+        }
+        document.getElementById('f_detail').value = log.detail||'';
+        document.getElementById('f_nextaction').value = log.nextAction||'';
+        document.getElementById('f_nextdate').value = log.nextDate||'';
+        document.getElementById('f_contactname').value = log.contactName||'';
+        document.getElementById('f_contactinfo').value = log.contactInfo||'';
+        document.getElementById('f_hours').value = log.expectedHours!=null?log.expectedHours:'';
+        document.getElementById('f_revenue').value = log.expectedRevenue!=null?formatYen(log.expectedRevenue):'';
+        updateNextActionVisibility();
+      });
+    });
+    el.querySelectorAll('.log-delete-btn').forEach(btn=>{
+      btn.addEventListener('click', async ()=>{
+        if(c.logs.length<=1){ alert('最後の1件は削除できません。会社ごと削除する場合は「この会社を削除」を使ってください。'); return; }
+        if(!confirm('この記録を削除しますか？')) return;
+        const logId = btn.dataset.id;
+        const { error } = await window.__SUPA.from('company_logs').delete().eq('id', logId);
+        if(error){ alert('削除に失敗しました：'+error.message); return; }
+        c.logs = c.logs.filter(x=>String(x.id)!==logId);
+        if(editingLogId!=null && String(editingLogId)===logId) resetLogForm();
+        renderHistory(c);
+        renderBoard();
+      });
+    });
   }
+  document.getElementById('cancelEditLog').addEventListener('click', resetLogForm);
   document.getElementById('closeModal').addEventListener('click', ()=>{ document.getElementById('overlay').classList.remove('open'); renderBoard(); });
   document.getElementById('overlay').addEventListener('click', e=>{ if(e.target.id==='overlay'){ document.getElementById('overlay').classList.remove('open'); renderBoard(); } });
+  document.getElementById('saveCompanyInfo').addEventListener('click', async ()=>{
+    const c = companies.find(x=>x.id===activeCompanyId);
+    const name = document.getElementById('f_companyname').value.trim();
+    const industry = document.getElementById('f_companyindustry').value;
+    if(!name || !industry){ alert('会社名と業種は必須です'); return; }
+    const { error } = await window.__SUPA.from('companies').update({name, industry}).eq('id', c.id);
+    if(error){ alert('更新に失敗しました：'+error.message); return; }
+    c.name = name; c.industry = industry;
+    document.getElementById('modalTitle').textContent = c.name+'（'+c.industry+'）';
+    renderBoard();
+    alert('会社情報を更新しました');
+  });
+  document.getElementById('deleteCompanyBtn').addEventListener('click', async ()=>{
+    const c = companies.find(x=>x.id===activeCompanyId);
+    if(!confirm(c.name+'を削除します。記録もすべて削除され、元に戻せません。よろしいですか？')) return;
+    const { error } = await window.__SUPA.from('companies').delete().eq('id', c.id);
+    if(error){ alert('削除に失敗しました：'+error.message); return; }
+    companies = companies.filter(x=>x.id!==c.id);
+    document.getElementById('overlay').classList.remove('open');
+    renderBoard();
+  });
   document.getElementById('saveLog').addEventListener('click', async ()=>{
     const c = companies.find(x=>x.id===activeCompanyId);
     const date = document.getElementById('f_date').value || todayStr();
@@ -737,29 +824,28 @@
     const expectedRevenue = calcRevenue(hoursRaw);
     const saveBtn = document.getElementById('saveLog');
     saveBtn.disabled = true;
-    const { data, error } = await window.__SUPA.from('company_logs').insert({
-      company_id: c.id, log_date: date, owner_email: currentUser,
+    const payload = {
+      log_date: date, owner_email: currentUser,
       stage, confidence_label: confidence, progress: rate,
       progress_text: detail, next_action: nextAction, next_date: nextDate,
       contact_name: contactName, contact_info: contactInfo,
       expected_hours: expectedHours, expected_revenue: expectedRevenue
-    }).select().single();
-    saveBtn.disabled = false;
-    if(error){ alert('保存に失敗しました：'+error.message); return; }
-    c.logs.push({id:data.id, date, owner:currentUser, progress:rate, stage, confidence, detail, nextAction, nextDate,
-      contactName, contactInfo, expectedHours, expectedRevenue});
+    };
+    if(editingLogId){
+      const { error } = await window.__SUPA.from('company_logs').update(payload).eq('id', editingLogId);
+      saveBtn.disabled = false;
+      if(error){ alert('更新に失敗しました：'+error.message); return; }
+      const idx = c.logs.findIndex(x=>x.id===editingLogId);
+      if(idx>=0) c.logs[idx] = {id:editingLogId, date, owner:currentUser, progress:rate, stage, confidence, detail, nextAction, nextDate, contactName, contactInfo, expectedHours, expectedRevenue};
+    } else {
+      const { data, error } = await window.__SUPA.from('company_logs').insert({ company_id: c.id, ...payload }).select().single();
+      saveBtn.disabled = false;
+      if(error){ alert('保存に失敗しました：'+error.message); return; }
+      c.logs.push({id:data.id, date, owner:currentUser, progress:rate, stage, confidence, detail, nextAction, nextDate,
+        contactName, contactInfo, expectedHours, expectedRevenue});
+    }
     renderHistory(c);
-    document.getElementById('f_stage').value='';
-    const confInput = document.getElementById('f_confidence');
-    confInput.value=''; confInput.readOnly=true; confInput.disabled=true; confInput.placeholder='';
-    document.getElementById('f_detail').value='';
-    document.getElementById('f_nextaction').value='';
-    document.getElementById('f_nextdate').value='';
-    document.getElementById('f_contactname').value='';
-    document.getElementById('f_contactinfo').value='';
-    document.getElementById('f_hours').value='';
-    document.getElementById('f_revenue').value='';
-    updateNextActionVisibility();
+    resetLogForm();
     renderBoard();
   });
 
