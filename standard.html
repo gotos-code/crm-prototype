@@ -266,6 +266,7 @@
         <div id="alertBanner"></div>
         <div class="search-bar">
           <input type="text" id="searchBox" placeholder="会社名・業種で検索">
+          <button class="btn btn-primary" id="openAddCompanyBtn" type="button">＋ 企業を追加</button>
           <button class="btn" id="openImportBtn" type="button">📥 CSV一括インポート</button>
           <button class="btn" id="bulkDeleteBtn" type="button" style="display:none;color:var(--danger);border-color:var(--danger);">選択した企業を削除</button>
         </div>
@@ -383,6 +384,22 @@
 
       <div class="subhead">これまでの記録</div>
       <div id="logHistory"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Add Company Drawer -->
+<div class="overlay" id="addCompanyOverlay">
+  <div class="drawer" style="width:420px;">
+    <div class="drawer-head">
+      <h2>企業を追加</h2>
+      <button class="close-x" id="closeAddCompany">✕</button>
+    </div>
+    <div class="drawer-body">
+      <div class="field"><label>会社名</label><input type="text" id="newCompanyName" placeholder="例）株式会社サンプル"></div>
+      <div class="field"><label>業種</label><select id="newCompanyIndustry"></select></div>
+      <button class="btn btn-primary" id="submitAddCompany" style="width:100%;">この内容で追加する</button>
+      <div id="addCompanyResult" style="margin-top:10px;font-size:13px;"></div>
     </div>
   </div>
 </div>
@@ -626,6 +643,34 @@
       sel.addEventListener('change', ()=>{ importRowsData[parseInt(sel.dataset.idx)].industry = sel.value; });
     });
   }
+  // ---- add company ----
+  document.getElementById('openAddCompanyBtn').addEventListener('click', ()=>{
+    document.getElementById('newCompanyName').value = '';
+    document.getElementById('newCompanyIndustry').innerHTML = industryOptionsHtml('');
+    document.getElementById('addCompanyResult').textContent = '';
+    document.getElementById('addCompanyOverlay').classList.add('open');
+  });
+  document.getElementById('closeAddCompany').addEventListener('click', ()=>{ document.getElementById('addCompanyOverlay').classList.remove('open'); });
+  document.getElementById('addCompanyOverlay').addEventListener('click', e=>{ if(e.target.id==='addCompanyOverlay') document.getElementById('addCompanyOverlay').classList.remove('open'); });
+  document.getElementById('submitAddCompany').addEventListener('click', async ()=>{
+    const name = document.getElementById('newCompanyName').value.trim();
+    const industry = document.getElementById('newCompanyIndustry').value;
+    if(!name || !industry){ alert('会社名と業種は必須です'); return; }
+    const btn = document.getElementById('submitAddCompany');
+    btn.disabled = true; btn.textContent = '追加中…';
+    const { data: newCompany, error } = await window.__SUPA.from('companies').insert({ name, industry }).select().single();
+    if(!error && newCompany){
+      await window.__SUPA.from('company_logs').insert({
+        company_id: newCompany.id, stage: '未着手', confidence_label: '未着手', progress: 0
+      });
+    }
+    btn.disabled = false; btn.textContent = 'この内容で追加する';
+    if(error){ document.getElementById('addCompanyResult').textContent = '追加に失敗しました：'+error.message; return; }
+    companies = await loadCompanies();
+    renderList();
+    document.getElementById('addCompanyOverlay').classList.remove('open');
+  });
+
   document.getElementById('openImportBtn').addEventListener('click', ()=>{
     importRowsData = [];
     document.getElementById('importFile').value = '';
