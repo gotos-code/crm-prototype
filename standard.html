@@ -334,7 +334,10 @@
       </div>
 
       <div class="subhead" id="logFormTitle">新しい進捗を記録</div>
-      <div class="field"><label>アプローチ日</label><input type="date" id="f_date"></div>
+      <div class="grid2">
+        <div class="field"><label>アプローチ日</label><input type="date" id="f_date"></div>
+        <div class="field"><label>担当者</label><select id="f_owner"></select></div>
+      </div>
       <div class="grid2">
         <div class="field"><label>進捗内容</label><select id="f_stage"></select></div>
         <div class="field"><label>確度</label><input type="text" id="f_confidence" readonly disabled></div>
@@ -416,7 +419,7 @@
       PROFILE_MAP[window.__CRM_USER_EMAIL] = window.__CRM_USER_EMAIL.split('@')[0];
     }
   }
-  function ownerLabel(email){ return PROFILE_MAP[email] || (email ? email.split('@')[0] : '—'); }
+  function ownerLabel(email){ return PROFILE_MAP[email] || (email ? email.split('@')[0] : '-'); }
 
   const INDUSTRY_OPTIONS = ['商社','製造業','飲食','物流','デザイン','建設','IT','医療','流通','小売','金融','不動産','教育','人材','その他'];
 
@@ -536,7 +539,7 @@
         '<td><strong>'+c.name+'</strong></td>'+
         '<td>'+c.industry+'</td>'+
         '<td>'+ownerLabel(l.owner)+'</td>'+
-        '<td>'+l.date+'</td>'+
+        '<td>'+(l.date||'-')+'</td>'+
         '<td>'+l.stage+'</td>'+
         '<td><span class="pill pill-neutral">'+l.confidence+'</span></td>'+
         '<td>'+(l.nextAction||'—')+'</td>'+
@@ -635,7 +638,7 @@
       const { data: newCompany, error } = await window.__SUPA.from('companies').insert({ name: row.name, industry: row.industry }).select().single();
       if(error || !newCompany){ failed++; continue; }
       const { error: logError } = await window.__SUPA.from('company_logs').insert({
-        company_id: newCompany.id, log_date: todayStr(), owner_email: currentUser,
+        company_id: newCompany.id,
         stage: '未着手', confidence_label: '未着手', progress: 0
       });
       if(logError){ failed++; } else { success++; }
@@ -781,6 +784,10 @@
     '<option value="'+OTHER_STAGE+'">'+OTHER_STAGE+'</option>';
   document.getElementById('f_stage').innerHTML = stageOptionsHtml;
   document.getElementById('f_nextaction').innerHTML = stageOptionsHtml;
+  function ownerOptionsHtml(selected){
+    return REPS.map(r=>'<option value="'+r+'"'+(r===selected?' selected':'')+'>'+ownerLabel(r)+'</option>').join('');
+  }
+  document.getElementById('f_owner').innerHTML = ownerOptionsHtml(currentUser);
 
   function updateNextActionVisibility(){
     const stage = document.getElementById('f_stage').value;
@@ -816,6 +823,7 @@
     document.getElementById('saveLog').textContent = 'この内容で記録する';
     document.getElementById('cancelEditLog').style.display = 'none';
     document.getElementById('f_date').value = todayStr();
+    document.getElementById('f_owner').innerHTML = ownerOptionsHtml(currentUser);
     document.getElementById('f_stage').value = '';
     const confInput = document.getElementById('f_confidence');
     confInput.value = ''; confInput.readOnly = true; confInput.disabled = true; confInput.placeholder = '';
@@ -841,7 +849,7 @@
   function renderHistory(c){
     const el = document.getElementById('logHistory');
     el.innerHTML = c.logs.slice().reverse().map(l=>{
-      return '<div class="log-entry"><div class="meta"><span>'+l.date+'　担当: '+ownerLabel(l.owner)+'</span><span>確度 '+l.confidence+'</span></div>'+
+      return '<div class="log-entry"><div class="meta"><span>'+(l.date||'-')+'　担当: '+ownerLabel(l.owner)+'</span><span>確度 '+l.confidence+'</span></div>'+
         '<div><strong>進捗内容：</strong>'+ l.stage +'</div>'+
         (l.detail? '<div><strong>進捗詳細：</strong>'+l.detail+'</div>':'')+
         (l.nextAction? '<div><strong>ネクストアクション：</strong>'+l.nextAction+'（'+l.nextDate+'）</div>':'<div><strong>ネクストアクション：</strong>不要（受注・失注）</div>')+
@@ -859,7 +867,8 @@
         document.getElementById('logFormTitle').textContent = 'この記録を編集';
         document.getElementById('saveLog').textContent = '更新する';
         document.getElementById('cancelEditLog').style.display = '';
-        document.getElementById('f_date').value = log.date;
+        document.getElementById('f_date').value = log.date||todayStr();
+        document.getElementById('f_owner').innerHTML = ownerOptionsHtml(log.owner||currentUser);
         document.getElementById('f_stage').value = STAGES.find(s=>s.stage===log.stage) ? log.stage : OTHER_STAGE;
         const confInput = document.getElementById('f_confidence');
         if(document.getElementById('f_stage').value===OTHER_STAGE){
@@ -923,6 +932,7 @@
   document.getElementById('saveLog').addEventListener('click', async ()=>{
     const c = companies.find(x=>x.id===activeCompanyId);
     const date = document.getElementById('f_date').value || todayStr();
+    const owner = document.getElementById('f_owner').value || currentUser;
     const stage = document.getElementById('f_stage').value;
     const confidence = document.getElementById('f_confidence').value.trim();
     const detail = document.getElementById('f_detail').value.trim();
@@ -945,7 +955,7 @@
     const saveBtn = document.getElementById('saveLog');
     saveBtn.disabled = true;
     const payload = {
-      log_date: date, owner_email: currentUser,
+      log_date: date, owner_email: owner,
       stage, confidence_label: confidence, progress: rate,
       progress_text: detail, next_action: nextAction, next_date: nextDate,
       contact_name: contactName, contact_info: contactInfo,
@@ -956,12 +966,12 @@
       saveBtn.disabled = false;
       if(error){ alert('更新に失敗しました：'+error.message); return; }
       const idx = c.logs.findIndex(x=>x.id===editingLogId);
-      if(idx>=0) c.logs[idx] = {id:editingLogId, date, owner:currentUser, progress:rate, stage, confidence, detail, nextAction, nextDate, contactName, contactInfo, expectedHours, expectedRevenue};
+      if(idx>=0) c.logs[idx] = {id:editingLogId, date, owner, progress:rate, stage, confidence, detail, nextAction, nextDate, contactName, contactInfo, expectedHours, expectedRevenue};
     } else {
       const { data, error } = await window.__SUPA.from('company_logs').insert({ company_id: c.id, ...payload }).select().single();
       saveBtn.disabled = false;
       if(error){ alert('保存に失敗しました：'+error.message); return; }
-      c.logs.push({id:data.id, date, owner:currentUser, progress:rate, stage, confidence, detail, nextAction, nextDate,
+      c.logs.push({id:data.id, date, owner, progress:rate, stage, confidence, detail, nextAction, nextDate,
         contactName, contactInfo, expectedHours, expectedRevenue});
     }
     renderHistory(c);
