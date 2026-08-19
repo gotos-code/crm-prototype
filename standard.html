@@ -157,19 +157,19 @@
   .export-row{display:flex;gap:10px;margin-bottom:14px;}
   .group-title{font-weight:700;font-size:13px;margin:18px 0 8px;padding:6px 10px;background:var(--surface-2);border-radius:5px;}
   .empty{color:var(--ink-soft);font-size:13px;padding:20px 0;text-align:center;}
-  .kanban{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;}
-  .kcol-head{font-weight:700;font-size:13px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;color:var(--ink-soft);}
-  .kcol-head .n{background:var(--surface-2);border-radius:100px;padding:1px 9px;font-size:11.5px;font-variant-numeric:tabular-nums;}
-  .kcard{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:13px 14px;margin-bottom:12px;cursor:pointer;}
+  .kanban{display:flex;gap:10px;overflow-x:auto;padding-bottom:10px;align-items:flex-start;}
+  .kcol{flex:0 0 148px;width:148px;}
+  .kcol-head{font-weight:700;font-size:11.5px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;color:var(--ink-soft);gap:4px;}
+  .kcol-head .n{background:var(--surface-2);border-radius:100px;padding:1px 7px;font-size:10.5px;font-variant-numeric:tabular-nums;flex:none;}
+  .kcard{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:9px 10px;margin-bottom:8px;cursor:pointer;}
   .kcard:hover{background:var(--surface-2);}
-  .kcard .cname{font-weight:700;font-size:13.5px;margin-bottom:3px;}
-  .kcard .cind{font-size:11.5px;color:var(--ink-soft);margin-bottom:9px;}
-  .kcard .bar{height:6px;border-radius:4px;background:var(--surface-2);overflow:hidden;margin-bottom:8px;}
+  .kcard .cname{font-weight:700;font-size:11.5px;margin-bottom:2px;line-height:1.3;}
+  .kcard .cind{font-size:10px;color:var(--ink-soft);margin-bottom:6px;}
+  .kcard .bar{height:4px;border-radius:3px;background:var(--surface-2);overflow:hidden;margin-bottom:6px;}
   .kcard .bar i{display:block;height:100%;background:var(--primary);}
-  .kcard .na{font-size:12px;margin-bottom:7px;}
-  .kcard .meta-row{display:flex;justify-content:space-between;align-items:center;}
-  .kcard .owner{font-size:11px;color:var(--ink-soft);}
-  @media (max-width: 980px){.kanban{grid-template-columns:repeat(2,1fr);}}
+  .kcard .na{font-size:10.5px;margin-bottom:5px;line-height:1.3;}
+  .kcard .meta-row{display:flex;flex-direction:column;align-items:flex-start;gap:3px;}
+  .kcard .owner{font-size:9.5px;color:var(--ink-soft);}
   /* summary */
   .stat-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:20px;}
   .stat-tile{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;}
@@ -304,6 +304,10 @@
             </div>
             <div class="cal-grid" id="calGrid"></div>
           </div>
+        </div>
+        <div class="panel" id="dayDetailPanel" style="display:none;">
+          <div class="panel-head"><h2 id="dayDetailTitle"></h2></div>
+          <div class="panel-body" id="dayDetailBody"></div>
         </div>
       </div>
 
@@ -1035,28 +1039,48 @@
       const dateStr = y+'-'+String(m+1).padStart(2,'0')+'-'+String(day).padStart(2,'0');
       const cell=document.createElement('div');
       cell.className='cal-cell'+(dateStr===T?' today':'');
+      cell.style.cursor='pointer';
       cell.innerHTML='<div class="d">'+day+'</div>';
-      companies.forEach(c=>{
+      const dayCompanies = companies.filter(c=>latestLog(c).nextDate===dateStr);
+      dayCompanies.forEach(c=>{
         const l = latestLog(c);
-        if(l.nextDate===dateStr){
-          const diff = daysDiff(l.nextDate);
-          const item=document.createElement('div');
-          item.className='cal-item'+(diff>0?' future':'');
-          item.textContent=c.name;
-          item.title=c.name+'：'+l.nextAction;
-          item.addEventListener('click', ()=>{
-            document.querySelector('.nav-item[data-nav="list"]').click();
-            openDrawer(c.id);
-          });
-          cell.appendChild(item);
-        }
+        const diff = daysDiff(l.nextDate);
+        const item=document.createElement('div');
+        item.className='cal-item'+(diff>0?' future':'');
+        item.textContent=c.name;
+        item.title=c.name+'：'+l.nextAction;
+        item.addEventListener('click', (e)=>{
+          e.stopPropagation();
+          document.querySelector('.nav-item[data-nav="list"]').click();
+          openDrawer(c.id);
+        });
+        cell.appendChild(item);
       });
+      cell.addEventListener('click', ()=> showDayDetail(dateStr, dayCompanies));
       grid.appendChild(cell);
     }
   }
-  document.getElementById('calPrev').addEventListener('click', ()=>{ calDate.setMonth(calDate.getMonth()-1); renderCalendar(); });
-  document.getElementById('calNext').addEventListener('click', ()=>{ calDate.setMonth(calDate.getMonth()+1); renderCalendar(); });
-  document.getElementById('calToday').addEventListener('click', ()=>{ calDate = new Date(); renderCalendar(); });
+  function showDayDetail(dateStr, dayCompanies){
+    const panel = document.getElementById('dayDetailPanel');
+    const [y,m,d] = dateStr.split('-').map(Number);
+    document.getElementById('dayDetailTitle').textContent = y+'年'+m+'月'+d+'日のネクストアクション（'+dayCompanies.length+'件）';
+    document.getElementById('dayDetailBody').innerHTML = dayCompanies.length===0 ? '<div class="empty">この日にネクストアクションはありません</div>' :
+      '<div class="table-scroll"><table><thead><tr><th>会社名</th><th>担当者</th><th>ネクストアクション</th></tr></thead><tbody>'+
+      dayCompanies.map(c=>{
+        const l = latestLog(c);
+        return '<tr class="row" data-id="'+c.id+'"><td><strong>'+c.name+'</strong></td><td>'+ownerLabel(l.owner)+'</td><td>'+(l.nextAction||'—')+'</td></tr>';
+      }).join('')+'</tbody></table></div>';
+    document.querySelectorAll('#dayDetailBody tr.row').forEach(tr=>{
+      tr.addEventListener('click', ()=>{
+        document.querySelector('.nav-item[data-nav="list"]').click();
+        openDrawer(parseInt(tr.dataset.id));
+      });
+    });
+    panel.style.display = '';
+  }
+  document.getElementById('calPrev').addEventListener('click', ()=>{ calDate.setMonth(calDate.getMonth()-1); renderCalendar(); document.getElementById('dayDetailPanel').style.display='none'; });
+  document.getElementById('calNext').addEventListener('click', ()=>{ calDate.setMonth(calDate.getMonth()+1); renderCalendar(); document.getElementById('dayDetailPanel').style.display='none'; });
+  document.getElementById('calToday').addEventListener('click', ()=>{ calDate = new Date(); renderCalendar(); document.getElementById('dayDetailPanel').style.display='none'; });
 
   // ---- admin ----
   let adminTab = 'person';
@@ -1076,7 +1100,7 @@
     const el = document.getElementById('adminContent');
     let groups = {};
     if(adminTab==='person'){
-      rows.forEach(r=>{ (groups[r.l.owner] = groups[r.l.owner]||[]).push(r); });
+      rows.forEach(r=>{ const k=r.l.owner||'（未設定）'; (groups[k] = groups[k]||[]).push(r); });
     } else if(adminTab==='deal'){
       rows.forEach(r=>{ (groups[r.c.name] = groups[r.c.name]||[]).push(r); });
     } else if(adminTab==='rate'){
@@ -1085,10 +1109,16 @@
       rows.sort((a,b)=> (a.l.nextDate||'9999').localeCompare(b.l.nextDate||'9999'));
       rows.forEach(r=>{ const k=r.l.nextDate||'（対応不要）'; (groups[k]=groups[k]||[]).push(r); });
     }
-    const keys = Object.keys(groups).sort();
+    const NULL_KEYS = ['（未設定）','（対応不要）'];
+    const keys = Object.keys(groups).sort((a,b)=>{
+      const an = NULL_KEYS.includes(a), bn = NULL_KEYS.includes(b);
+      if(an && !bn) return 1;
+      if(!an && bn) return -1;
+      return a.localeCompare(b);
+    });
     el.innerHTML = keys.map(k=>{
       const items = groups[k];
-      const title = adminTab==='person' ? ownerLabel(k) : k;
+      const title = adminTab==='person' ? (NULL_KEYS.includes(k) ? k : ownerLabel(k)) : k;
       return '<div class="group-title">'+title+'（'+items.length+'件）</div>'+
         '<div class="panel"><div class="table-scroll"><table><thead><tr>'+
         '<th>会社名</th><th>担当者</th><th>進捗内容</th><th>確度</th><th>ネクストアクション</th><th>ネクストアクション日</th>'+
