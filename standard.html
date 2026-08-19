@@ -259,12 +259,14 @@
         <div class="search-bar">
           <input type="text" id="searchBox" placeholder="会社名・業種で検索">
           <button class="btn" id="openImportBtn" type="button">📥 CSV一括インポート</button>
+          <button class="btn" id="bulkDeleteBtn" type="button" style="display:none;color:var(--danger);border-color:var(--danger);">選択した企業を削除</button>
         </div>
         <div class="panel">
           <div class="panel-head"><h2>取引先企業（<span id="companyCount">0</span>件）</h2></div>
           <div class="table-scroll">
             <table>
               <thead><tr>
+                <th id="selectColHead" style="display:none;"><input type="checkbox" id="selectAllCheckbox" title="全選択"></th>
                 <th>会社名</th><th>業種</th><th>担当者</th><th>直近アプローチ日</th>
                 <th>進捗内容</th><th>確度</th><th>ネクストアクション</th><th>ネクストアクション日</th>
               </tr></thead>
@@ -510,6 +512,11 @@
     adminLink.textContent = '⚙ 承認管理';
     adminLink.style.cssText = 'font-size:12px;color:var(--ink-soft);text-decoration:none;margin-left:10px;';
     document.querySelector('.user-switch').appendChild(adminLink);
+    document.getElementById('selectColHead').style.display = '';
+    document.getElementById('bulkDeleteBtn').style.display = '';
+    document.getElementById('deleteCompanyBtn').style.display = '';
+  } else {
+    document.getElementById('deleteCompanyBtn').style.display = 'none';
   }
 
   // ---- alert banner ----
@@ -535,7 +542,9 @@
     const tbody = document.getElementById('companyTbody');
     tbody.innerHTML = filtered.map(c=>{
       const l = latestLog(c);
+      const checkboxCell = window.__CRM_IS_ADMIN ? '<td><input type="checkbox" class="companyCheckbox" data-id="'+c.id+'" onclick="event.stopPropagation()"></td>' : '';
       return '<tr class="row" data-id="'+c.id+'">'+
+        checkboxCell+
         '<td><strong>'+c.name+'</strong></td>'+
         '<td>'+c.industry+'</td>'+
         '<td>'+ownerLabel(l.owner)+'</td>'+
@@ -545,13 +554,30 @@
         '<td>'+(l.nextAction||'—')+'</td>'+
         '<td>'+statusPill(l.nextDate)+'</td>'+
         '</tr>';
-    }).join('') || '<tr><td colspan="8" class="empty">該当する企業がありません</td></tr>';
+    }).join('') || '<tr><td colspan="9" class="empty">該当する企業がありません</td></tr>';
     tbody.querySelectorAll('tr.row').forEach(tr=>{
       tr.addEventListener('click', ()=>openDrawer(parseInt(tr.dataset.id)));
     });
+    document.getElementById('selectAllCheckbox').checked = false;
     renderAlertBanner();
   }
   document.getElementById('searchBox').addEventListener('input', renderList);
+  document.getElementById('selectAllCheckbox').addEventListener('change', (e)=>{
+    document.querySelectorAll('.companyCheckbox').forEach(cb=> cb.checked = e.target.checked);
+  });
+  document.getElementById('bulkDeleteBtn').addEventListener('click', async ()=>{
+    const ids = Array.from(document.querySelectorAll('.companyCheckbox:checked')).map(cb=>parseInt(cb.dataset.id));
+    if(ids.length===0){ alert('削除する企業を選択してください'); return; }
+    const names = companies.filter(c=>ids.includes(c.id)).map(c=>c.name).join('、');
+    if(!confirm(ids.length+'件（'+names+'）を削除します。記録もすべて削除され、元に戻せません。よろしいですか？')) return;
+    const btn = document.getElementById('bulkDeleteBtn');
+    btn.disabled = true;
+    const { error } = await window.__SUPA.from('companies').delete().in('id', ids);
+    btn.disabled = false;
+    if(error){ alert('削除に失敗しました：'+error.message); return; }
+    companies = companies.filter(c=>!ids.includes(c.id));
+    renderList();
+  });
 
   // ---- CSV import ----
   let importRowsData = [];
@@ -722,20 +748,24 @@
       '<div class="stat-tile"><div class="label">受注率（受注÷着手数）</div><div class="value">'+(winRate!=null?winRate+'%':'—')+'</div></div>'+
       '<div class="stat-tile"><div class="label">平均売上見込（件あたり）</div><div class="value">'+(avgRevenue!=null?formatYen(avgRevenue):'—')+'</div></div>';
 
-    renderVBarChart('summaryCountChart', chartStages.map((s,i)=>({label:shortStageLabel(s.stage)+'（'+s.confidence+'）', value:counts[i], display:counts[i]+'件'})), '--chart-blue');
+    // 確度ごとの件数は未着手を除く（未着手はまだ何も進んでいないため）
+    const countChartStages = chartStages.filter(s=>s.stage!=='未着手');
+    const countsExclNotStarted = countChartStages.map(s=> rows.filter(r=>r.l.stage===s.stage).length);
+    renderVBarChart('summaryCountChart', countChartStages.map((s,i)=>({label:shortStageLabel(s.stage)+'（'+s.confidence+'）', value:countsExclNotStarted[i], display:countsExclNotStarted[i]+'件'})), '--chart-blue');
     renderVBarChart('summaryRevenueChart', chartStages.map((s,i)=>({label:shortStageLabel(s.stage)+'（'+s.confidence+'）', value:revenues[i], display:formatYen(revenues[i])||'¥0'})), '--chart-green');
 
-    // 月別アプローチ件数トレンド（直近6ヶ月・全ログ対象）
+    // 月別アプローチ件数トレンド（直近6ヶ月・未着手を除く）
     const now = new Date(todayStr()+'T00:00:00');
     const months = [];
     for(let i=5;i>=0;i--){ const d=new Date(now.getFullYear(), now.getMonth()-i, 1); months.push(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')); }
-    const allLogs = companies.reduce((acc,c)=>acc.concat(c.logs), []);
+    const allLogs = companies.reduce((acc,c)=>acc.concat(c.logs), []).filter(l=>l.stage!=='未着手');
     const trendCounts = months.map(k=> allLogs.filter(l=> (l.date||'').slice(0,7)===k).length);
     renderLineChart('summaryTrendChart', months.map((k,i)=>({label:parseInt(k.slice(5,7))+'月', value:trendCounts[i], display:trendCounts[i]+'件'})), '--chart-purple');
 
-    // 担当者ごと
-    const ownerKeys = Array.from(new Set(rows.map(r=>r.l.owner)));
-    const ownerCounts = ownerKeys.map(o=> rows.filter(r=>r.l.owner===o).length);
+    // 担当者ごと（件数は未着手を除く。売上見込は従来通り全体）
+    const activeRows = rows.filter(r=>r.l.stage!=='未着手');
+    const ownerKeys = Array.from(new Set(activeRows.map(r=>r.l.owner)));
+    const ownerCounts = ownerKeys.map(o=> activeRows.filter(r=>r.l.owner===o).length);
     const ownerRevenues = ownerKeys.map(o=> rows.filter(r=>r.l.owner===o).reduce((s,r)=>s+(r.l.expectedRevenue||0),0));
     renderVBarChart('summaryOwnerCountChart', ownerKeys.map((o,i)=>({label:ownerLabel(o), value:ownerCounts[i], display:ownerCounts[i]+'件'})), '--chart-amber');
     renderVBarChart('summaryOwnerRevenueChart', ownerKeys.map((o,i)=>({label:ownerLabel(o), value:ownerRevenues[i], display:formatYen(ownerRevenues[i])||'¥0'})), '--chart-teal');
