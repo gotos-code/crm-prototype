@@ -50,7 +50,7 @@
   <h1>承認管理</h1>
   <p class="lead">サインアップしたアカウントの承認・管理者権限を設定します。</p>
   <table>
-    <thead><tr><th>メールアドレス</th><th>状態</th><th>権限</th><th>登録日</th><th>操作</th></tr></thead>
+    <thead><tr><th>氏名</th><th>メールアドレス</th><th>状態</th><th>権限</th><th>登録日</th><th>操作</th></tr></thead>
     <tbody id="rows"></tbody>
   </table>
 </div>
@@ -70,19 +70,20 @@
   function fmtDate(iso){ return new Date(iso).toLocaleDateString('ja-JP',{year:'numeric',month:'2-digit',day:'2-digit'}); }
 
   async function loadRows(){
-    const { data: rows, error } = await client.from('profiles').select('id,email,approved,is_admin,created_at').order('created_at', {ascending:true});
+    const { data: rows, error } = await client.from('profiles').select('id,email,approved,is_admin,created_at,last_name,first_name').order('created_at', {ascending:true});
     const tbody = document.getElementById('rows');
-    if(error || !rows || rows.length===0){ tbody.innerHTML = '<tr><td colspan="5" class="empty">データがありません</td></tr>'; return; }
+    if(error || !rows || rows.length===0){ tbody.innerHTML = '<tr><td colspan="6" class="empty">データがありません</td></tr>'; return; }
     tbody.innerHTML = rows.map(r=>{
       const statusPill = r.approved ? '<span class="pill pill-ok">承認済み</span>' : '<span class="pill pill-warn">承認待ち</span>';
       const rolePill = r.is_admin ? '<span class="pill pill-admin">管理者</span>' : '<span class="pill pill-neutral">一般</span>';
+      const fullName = (r.last_name||r.first_name) ? (r.last_name||'')+' '+(r.first_name||'') : '—';
       const approveBtn = r.approved
         ? '<button class="act" data-action="unapprove" data-id="'+r.id+'">承認取消</button>'
         : '<button class="act primary" data-action="approve" data-id="'+r.id+'">承認する</button>';
       const adminBtn = r.is_admin
         ? '<button class="act" data-action="unadmin" data-id="'+r.id+'"'+(r.id===myId?' disabled title="自分自身の管理者権限は解除できません"':'')+'>管理者解除</button>'
         : '<button class="act" data-action="makeadmin" data-id="'+r.id+'">管理者にする</button>';
-      return '<tr><td>'+r.email+'</td><td>'+statusPill+'</td><td>'+rolePill+'</td><td>'+fmtDate(r.created_at)+'</td><td>'+approveBtn+adminBtn+'</td></tr>';
+      return '<tr><td>'+fullName+'</td><td>'+r.email+'</td><td>'+statusPill+'</td><td>'+rolePill+'</td><td>'+fmtDate(r.created_at)+'</td><td>'+approveBtn+adminBtn+'</td></tr>';
     }).join('');
     tbody.querySelectorAll('button.act').forEach(btn=>{
       btn.addEventListener('click', async ()=>{

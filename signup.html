@@ -38,8 +38,12 @@
     <h1>Nexus CRM 新規登録</h1>
     <p class="lead">社内メールアドレス（@sora1.jp）で登録してください。</p>
     <div class="msg" id="msg"></div>
+    <div class="grid2" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div><label for="lastname">姓</label><input type="text" id="lastname" placeholder="山田" autocomplete="family-name"></div>
+      <div><label for="firstname">名</label><input type="text" id="firstname" placeholder="太郎" autocomplete="given-name"></div>
+    </div>
     <label for="email">メールアドレス</label>
-    <input type="text" id="email" placeholder="you@sora1.jp" autocomplete="email" autofocus>
+    <input type="text" id="email" placeholder="you@sora1.jp" autocomplete="email">
     <label for="password">パスワード</label>
     <input type="password" id="password" placeholder="8文字以上" autocomplete="new-password">
     <div class="hint">8文字以上で設定してください</div>
@@ -57,6 +61,8 @@
   const client = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
   const form = document.getElementById('signupForm');
+  const lastNameInput = document.getElementById('lastname');
+  const firstNameInput = document.getElementById('firstname');
   const emailInput = document.getElementById('email');
   const passwordInput = document.getElementById('password');
   const password2Input = document.getElementById('password2');
@@ -70,17 +76,23 @@
 
   form.addEventListener('submit', async function(e){
     e.preventDefault();
+    const lastName = lastNameInput.value.trim();
+    const firstName = firstNameInput.value.trim();
     const email = emailInput.value.trim().toLowerCase();
     const password = passwordInput.value;
     const password2 = password2Input.value;
 
+    if(!lastName || !firstName){ showMsg('姓と名を入力してください', 'error'); return; }
     if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ showMsg('メールアドレスの形式が正しくありません', 'error'); return; }
     if(email.split('@')[1] !== ALLOWED_DOMAIN){ showMsg('@' + ALLOWED_DOMAIN + ' のメールアドレスのみ登録できます', 'error'); return; }
     if(password.length < 8){ showMsg('パスワードは8文字以上にしてください', 'error'); return; }
     if(password !== password2){ showMsg('パスワードが一致しません', 'error'); return; }
 
     submitBtn.disabled = true; submitBtn.textContent = '登録中…';
-    const { data, error } = await client.auth.signUp({ email, password });
+    const { data, error } = await client.auth.signUp({
+      email, password,
+      options: { data: { last_name: lastName, first_name: firstName } }
+    });
     submitBtn.disabled = false; submitBtn.textContent = '登録する';
 
     if(error){ showMsg('登録に失敗しました：' + error.message, 'error'); return; }

@@ -403,8 +403,20 @@
   const USER_KEY = 'nexusCrmSampleA_user';
   const todayStr = () => new Date().toISOString().slice(0,10);
 
-  const REPS = ['goto.s@sora1.jp','tanaka.m@sora1.jp','suzuki.k@sora1.jp','yamamoto.r@sora1.jp'];
-  if(window.__CRM_USER_EMAIL && !REPS.includes(window.__CRM_USER_EMAIL)) REPS.unshift(window.__CRM_USER_EMAIL);
+  const PROFILE_MAP = {};
+  let REPS = [];
+  {
+    const { data: profiles } = await window.__SUPA.from('profiles').select('email,last_name,first_name').eq('approved', true).order('email');
+    (profiles||[]).forEach(p=>{
+      PROFILE_MAP[p.email] = (p.last_name||p.first_name) ? ((p.last_name||'')+' '+(p.first_name||'')).trim() : p.email.split('@')[0];
+    });
+    REPS = (profiles||[]).map(p=>p.email);
+    if(window.__CRM_USER_EMAIL && !REPS.includes(window.__CRM_USER_EMAIL)){
+      REPS.unshift(window.__CRM_USER_EMAIL);
+      PROFILE_MAP[window.__CRM_USER_EMAIL] = window.__CRM_USER_EMAIL.split('@')[0];
+    }
+  }
+  function ownerLabel(email){ return PROFILE_MAP[email] || (email ? email.split('@')[0] : '—'); }
 
   const INDUSTRY_OPTIONS = ['商社','製造業','飲食','物流','デザイン','建設','IT','医療','流通','小売','金融','不動産','教育','人材','その他'];
 
@@ -484,7 +496,7 @@
   // ---- user switch ----
   const userSelect = document.getElementById('userSelect');
   REPS.forEach(r=>{
-    const o=document.createElement('option'); o.value=r; o.textContent=r; userSelect.appendChild(o);
+    const o=document.createElement('option'); o.value=r; o.textContent=ownerLabel(r)+'（'+r+'）'; userSelect.appendChild(o);
   });
   userSelect.value = currentUser;
   userSelect.addEventListener('change', ()=>{ currentUser = userSelect.value; localStorage.setItem(USER_KEY,currentUser); renderAdmin(); });
@@ -523,7 +535,7 @@
       return '<tr class="row" data-id="'+c.id+'">'+
         '<td><strong>'+c.name+'</strong></td>'+
         '<td>'+c.industry+'</td>'+
-        '<td>'+l.owner.split('@')[0]+'</td>'+
+        '<td>'+ownerLabel(l.owner)+'</td>'+
         '<td>'+l.date+'</td>'+
         '<td>'+l.stage+'</td>'+
         '<td><span class="pill pill-neutral">'+l.confidence+'</span></td>'+
@@ -722,8 +734,8 @@
     const ownerKeys = Array.from(new Set(rows.map(r=>r.l.owner)));
     const ownerCounts = ownerKeys.map(o=> rows.filter(r=>r.l.owner===o).length);
     const ownerRevenues = ownerKeys.map(o=> rows.filter(r=>r.l.owner===o).reduce((s,r)=>s+(r.l.expectedRevenue||0),0));
-    renderVBarChart('summaryOwnerCountChart', ownerKeys.map((o,i)=>({label:o.split('@')[0], value:ownerCounts[i], display:ownerCounts[i]+'件'})), '--chart-amber');
-    renderVBarChart('summaryOwnerRevenueChart', ownerKeys.map((o,i)=>({label:o.split('@')[0], value:ownerRevenues[i], display:formatYen(ownerRevenues[i])||'¥0'})), '--chart-teal');
+    renderVBarChart('summaryOwnerCountChart', ownerKeys.map((o,i)=>({label:ownerLabel(o), value:ownerCounts[i], display:ownerCounts[i]+'件'})), '--chart-amber');
+    renderVBarChart('summaryOwnerRevenueChart', ownerKeys.map((o,i)=>({label:ownerLabel(o), value:ownerRevenues[i], display:formatYen(ownerRevenues[i])||'¥0'})), '--chart-teal');
 
     // 業種ごと（構成比なのでドーナツ。多い場合は上位6件＋その他にまとめる）
     const industryKeys = Array.from(new Set(companies.map(c=>c.industry)));
@@ -752,7 +764,7 @@
             '<div class="cname">'+c.name+'</div><div class="cind">'+c.industry+'</div>'+
             '<div class="bar"><i style="width:'+l.progress+'%"></i></div>'+
             '<div class="na">▸ '+(l.nextAction||'不要（受注・失注）')+'</div>'+
-            '<div class="meta-row"><span class="owner">'+l.owner.split('@')[0]+'</span>'+statusPill(l.nextDate)+'</div>'+
+            '<div class="meta-row"><span class="owner">'+ownerLabel(l.owner)+'</span>'+statusPill(l.nextDate)+'</div>'+
             '</div>';
         }).join('') + (items.length===0?'<div class="empty" style="padding:12px;">なし</div>':'') +
         '</div>';
@@ -829,7 +841,7 @@
   function renderHistory(c){
     const el = document.getElementById('logHistory');
     el.innerHTML = c.logs.slice().reverse().map(l=>{
-      return '<div class="log-entry"><div class="meta"><span>'+l.date+'　担当: '+l.owner.split('@')[0]+'</span><span>確度 '+l.confidence+'</span></div>'+
+      return '<div class="log-entry"><div class="meta"><span>'+l.date+'　担当: '+ownerLabel(l.owner)+'</span><span>確度 '+l.confidence+'</span></div>'+
         '<div><strong>進捗内容：</strong>'+ l.stage +'</div>'+
         (l.detail? '<div><strong>進捗詳細：</strong>'+l.detail+'</div>':'')+
         (l.nextAction? '<div><strong>ネクストアクション：</strong>'+l.nextAction+'（'+l.nextDate+'）</div>':'<div><strong>ネクストアクション：</strong>不要（受注・失注）</div>')+
@@ -1028,11 +1040,12 @@
     const keys = Object.keys(groups).sort();
     el.innerHTML = keys.map(k=>{
       const items = groups[k];
-      return '<div class="group-title">'+k+'（'+items.length+'件）</div>'+
+      const title = adminTab==='person' ? ownerLabel(k) : k;
+      return '<div class="group-title">'+title+'（'+items.length+'件）</div>'+
         '<div class="panel"><div class="table-scroll"><table><thead><tr>'+
         '<th>会社名</th><th>担当者</th><th>進捗内容</th><th>確度</th><th>ネクストアクション</th><th>ネクストアクション日</th>'+
         '</tr></thead><tbody>'+
-        items.map(r=>'<tr><td>'+r.c.name+'</td><td>'+r.l.owner+'</td><td>'+r.l.stage+'</td><td>'+r.l.confidence+'</td><td>'+(r.l.nextAction||'—')+'</td><td>'+statusPill(r.l.nextDate)+'</td></tr>').join('')+
+        items.map(r=>'<tr><td>'+r.c.name+'</td><td>'+ownerLabel(r.l.owner)+'</td><td>'+r.l.stage+'</td><td>'+r.l.confidence+'</td><td>'+(r.l.nextAction||'—')+'</td><td>'+statusPill(r.l.nextDate)+'</td></tr>').join('')+
         '</tbody></table></div></div>';
     }).join('') || '<div class="empty">データがありません</div>';
   }
