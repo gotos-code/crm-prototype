@@ -258,6 +258,7 @@
         <div id="alertBanner"></div>
         <div class="search-bar">
           <input type="text" id="searchBox" placeholder="会社名・業種で検索">
+          <button class="btn" id="openImportBtn" type="button">📥 CSV一括インポート</button>
         </div>
         <div class="panel">
           <div class="panel-head"><h2>取引先企業（<span id="companyCount">0</span>件）</h2></div>
@@ -356,6 +357,33 @@
   </div>
 </div>
 
+<!-- CSV Import Drawer -->
+<div class="overlay" id="importOverlay">
+  <div class="drawer" style="width:640px;">
+    <div class="drawer-head">
+      <h2>CSV一括インポート</h2>
+      <button class="close-x" id="closeImport">✕</button>
+    </div>
+    <div class="drawer-body">
+      <div class="subhead">CSVファイルを選択</div>
+      <p style="font-size:12.5px;color:var(--ink-soft);margin:0 0 10px;">
+        1行目はヘッダー行として無視されます。2行目以降、<strong>1列目=企業名、2列目=業種</strong>の順で記載してください。<br>
+        例）<code>企業名,業種</code> / <code>株式会社サンプル,IT</code>
+      </p>
+      <input type="file" id="importFile" accept=".csv,text/csv">
+      <div id="importSummary" style="margin-top:14px;"></div>
+      <div class="table-scroll" style="margin-top:10px;">
+        <table id="importTable" style="display:none;">
+          <thead><tr><th>企業名</th><th>業種</th></tr></thead>
+          <tbody id="importRows"></tbody>
+        </table>
+      </div>
+      <button class="btn btn-primary" id="runImportBtn" style="width:100%;margin-top:16px;display:none;">この内容でインポートする</button>
+      <div id="importResult" style="margin-top:12px;font-size:13px;"></div>
+    </div>
+  </div>
+</div>
+
 <script>
 (async function(){
   await window.__CRM_AUTH_PROMISE;
@@ -364,6 +392,8 @@
 
   const REPS = ['goto.s@sora1.jp','tanaka.m@sora1.jp','suzuki.k@sora1.jp','yamamoto.r@sora1.jp'];
   if(window.__CRM_USER_EMAIL && !REPS.includes(window.__CRM_USER_EMAIL)) REPS.unshift(window.__CRM_USER_EMAIL);
+
+  const INDUSTRY_OPTIONS = ['商社','製造業','飲食','物流','デザイン','建設','IT','医療','流通','小売','金融','不動産','教育','人材','その他'];
 
   const STAGES = [
     { stage:'未着手', confidence:'未着手', rate:0 },
@@ -493,6 +523,94 @@
     renderAlertBanner();
   }
   document.getElementById('searchBox').addEventListener('input', renderList);
+
+  // ---- CSV import ----
+  let importRowsData = [];
+  function parseCSV(text){
+    const lines = text.split(/\r\n|\n|\r/).filter(l=>l.trim().length>0);
+    return lines.map(line=>{
+      const cells = []; let cur=''; let inQuotes=false;
+      for(let i=0;i<line.length;i++){
+        const ch = line[i];
+        if(inQuotes){
+          if(ch==='"'){ if(line[i+1]==='"'){ cur+='"'; i++; } else { inQuotes=false; } }
+          else cur += ch;
+        } else {
+          if(ch==='"') inQuotes = true;
+          else if(ch===',') { cells.push(cur); cur=''; }
+          else cur += ch;
+        }
+      }
+      cells.push(cur);
+      return cells.map(c=>c.trim());
+    });
+  }
+  function industryOptionsHtml(selected){
+    return '<option value="" disabled'+(selected?'':' selected')+'>選択してください</option>' +
+      INDUSTRY_OPTIONS.map(o=>'<option value="'+o+'"'+(o===selected?' selected':'')+'>'+o+'</option>').join('');
+  }
+  function renderImportTable(){
+    document.getElementById('importTable').style.display = importRowsData.length ? '' : 'none';
+    document.getElementById('runImportBtn').style.display = importRowsData.length ? '' : 'none';
+    document.getElementById('importRows').innerHTML = importRowsData.map((r,i)=>
+      '<tr><td>'+r.name+'</td><td><select data-idx="'+i+'" class="importIndustrySelect">'+industryOptionsHtml(r.industry)+'</select></td></tr>'
+    ).join('');
+    document.querySelectorAll('.importIndustrySelect').forEach(sel=>{
+      sel.addEventListener('change', ()=>{ importRowsData[parseInt(sel.dataset.idx)].industry = sel.value; });
+    });
+  }
+  document.getElementById('openImportBtn').addEventListener('click', ()=>{
+    importRowsData = [];
+    document.getElementById('importFile').value = '';
+    document.getElementById('importSummary').textContent = '';
+    document.getElementById('importResult').textContent = '';
+    renderImportTable();
+    document.getElementById('importOverlay').classList.add('open');
+  });
+  document.getElementById('closeImport').addEventListener('click', ()=>{ document.getElementById('importOverlay').classList.remove('open'); });
+  document.getElementById('importOverlay').addEventListener('click', e=>{ if(e.target.id==='importOverlay') document.getElementById('importOverlay').classList.remove('open'); });
+  document.getElementById('importFile').addEventListener('change', (e)=>{
+    const file = e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const rows = parseCSV(String(reader.result));
+      const dataRows = rows.slice(1); // 1行目はヘッダーとして無視
+      importRowsData = dataRows.filter(c=>c[0]).map(c=>{
+        const name = c[0] || '';
+        const rawIndustry = (c[1]||'').trim();
+        const matched = INDUSTRY_OPTIONS.find(o=>o===rawIndustry);
+        return { name, industry: matched || '' };
+      });
+      const unmatched = importRowsData.filter(r=>!r.industry).length;
+      document.getElementById('importSummary').textContent = importRowsData.length+'件読み込みました。'+(unmatched>0 ? '（業種が一致しなかった行が'+unmatched+'件あります。プルダウンで選択してください）' : '');
+      renderImportTable();
+    };
+    reader.readAsText(file, 'utf-8');
+  });
+  document.getElementById('runImportBtn').addEventListener('click', async ()=>{
+    const missing = importRowsData.filter(r=>!r.industry).length;
+    if(missing>0){ alert('業種が未選択の行があります。すべて選択してください。'); return; }
+    if(importRowsData.length===0) return;
+    const btn = document.getElementById('runImportBtn');
+    btn.disabled = true; btn.textContent = 'インポート中…';
+    let success = 0, failed = 0;
+    for(const row of importRowsData){
+      const { data: newCompany, error } = await window.__SUPA.from('companies').insert({ name: row.name, industry: row.industry }).select().single();
+      if(error || !newCompany){ failed++; continue; }
+      const { error: logError } = await window.__SUPA.from('company_logs').insert({
+        company_id: newCompany.id, log_date: todayStr(), owner_email: currentUser,
+        stage: '未着手', confidence_label: '未着手', progress: 0
+      });
+      if(logError){ failed++; } else { success++; }
+    }
+    btn.disabled = false; btn.textContent = 'この内容でインポートする';
+    document.getElementById('importResult').textContent = success+'件インポートしました。'+(failed>0?failed+'件失敗しました。':'');
+    companies = await loadCompanies();
+    renderList();
+    importRowsData = [];
+    renderImportTable();
+  });
 
   // ---- summary ----
   function shortStageLabel(stage){ const i=(stage||'').indexOf('/'); return i>=0 ? stage.slice(0,i) : stage; }
