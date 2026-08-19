@@ -583,12 +583,22 @@
   });
   document.getElementById('closeImport').addEventListener('click', ()=>{ document.getElementById('importOverlay').classList.remove('open'); });
   document.getElementById('importOverlay').addEventListener('click', e=>{ if(e.target.id==='importOverlay') document.getElementById('importOverlay').classList.remove('open'); });
+  function decodeCsvBuffer(buffer){
+    try {
+      // 正当なUTF-8ならそのまま使う（不正なバイト列があれば例外を投げさせる）
+      return new TextDecoder('utf-8', {fatal:true}).decode(buffer).replace(/^﻿/, '');
+    } catch(e){
+      // ExcelなどWindowsで作られた日本語CSVはShift-JISが多いためフォールバック
+      return new TextDecoder('shift_jis').decode(buffer);
+    }
+  }
   document.getElementById('importFile').addEventListener('change', (e)=>{
     const file = e.target.files[0];
     if(!file) return;
     const reader = new FileReader();
     reader.onload = () => {
-      const rows = parseCSV(String(reader.result));
+      const text = decodeCsvBuffer(reader.result);
+      const rows = parseCSV(text);
       const dataRows = rows.slice(1); // 1行目はヘッダーとして無視
       importRowsData = dataRows.filter(c=>c[0]).map(c=>{
         const name = c[0] || '';
@@ -600,7 +610,7 @@
       document.getElementById('importSummary').textContent = importRowsData.length+'件読み込みました。'+(unmatched>0 ? '（業種が一致しなかった行が'+unmatched+'件あります。プルダウンで選択してください）' : '');
       renderImportTable();
     };
-    reader.readAsText(file, 'utf-8');
+    reader.readAsArrayBuffer(file);
   });
   document.getElementById('runImportBtn').addEventListener('click', async ()=>{
     const missing = importRowsData.filter(r=>!r.industry).length;
