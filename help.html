@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>使い方 — SO CRM</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Kosugi+Maru&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F5F4EF; --surface:#FFFFFF; --surface-2:#EEECE4;
+    --ink:#1E2430; --ink-soft:#5B6273; --border:#DEDAD0;
+    --primary:#2E5AA8; --primary-soft:#E7EBF5;
+    --accent:#2E7D6B; --accent-soft:#E3EFEA;
+    --warn:#C77A1E; --warn-soft:#FBEBD6;
+    --danger:#B23A2E; --danger-soft:#F7E1DD;
+    --font: "Hiragino Maru Gothic ProN", "Kosugi Maru", -apple-system, "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Yu Gothic", "Segoe UI", Meiryo, sans-serif;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#171B22; --surface:#1E232C; --surface-2:#262C36;
+      --ink:#E7E9ED; --ink-soft:#9AA2B1; --border:#333A46;
+      --primary:#4A6FB5; --primary-soft:#232B3D;
+      --accent:#5FAF9A; --accent-soft:#1E2E2A;
+      --warn:#E0A857; --warn-soft:#3A2E1C;
+      --danger:#E28A7C; --danger-soft:#3A2320;
+    }
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:var(--font);color:var(--ink);background:var(--bg);font-size:14.5px;line-height:1.75;}
+  #authGate{position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;align-items:center;justify-content:center;}
+  #authGateContent{display:none;text-align:center;max-width:340px;padding:20px;}
+  #authGateContent h2{font-size:16px;margin:0 0 10px;}
+  #authGateContent p{font-size:13px;color:var(--ink-soft);margin:0 0 18px;}
+  #authGateLogout{font-family:inherit;font-weight:700;font-size:13px;padding:9px 16px;border-radius:6px;border:1px solid var(--primary);background:var(--primary);color:#fff;cursor:pointer;}
+  .topbar{position:sticky;top:0;background:var(--surface);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;z-index:5;}
+  .topbar a.back{font-size:13px;color:var(--ink-soft);text-decoration:none;font-weight:700;}
+  .topbar a.back:hover{color:var(--primary);}
+  .topbar .brand{font-weight:800;font-size:15px;color:var(--primary);}
+  .wrap{max-width:860px;margin:0 auto;padding:36px 24px 100px;}
+  .lead{color:var(--ink-soft);font-size:14px;margin:0 0 30px;}
+  nav.toc{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px 22px;margin-bottom:34px;}
+  nav.toc h2{font-size:13px;margin:0 0 10px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.04em;}
+  nav.toc ol{margin:0;padding-left:1.3em;columns:2;column-gap:24px;}
+  nav.toc li{margin-bottom:5px;font-size:13.5px;}
+  nav.toc a{color:var(--primary);text-decoration:none;font-weight:700;}
+  section{margin-bottom:44px;}
+  section h2{font-size:19px;margin:0 0 14px;padding-bottom:10px;border-bottom:2px solid var(--border);}
+  section h3{font-size:15px;margin:24px 0 8px;color:var(--primary);}
+  p{margin:0 0 12px;}
+  ul,ol{margin:0 0 14px;padding-left:1.4em;}
+  li{margin-bottom:6px;}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 20px;margin:14px 0;}
+  .badge{display:inline-block;font-size:11.5px;font-weight:700;padding:2px 10px;border-radius:100px;margin-right:6px;}
+  .badge-admin{background:var(--primary-soft);color:var(--primary);}
+  .badge-warn{background:var(--warn-soft);color:var(--warn);}
+  table{width:100%;border-collapse:collapse;font-size:13.5px;margin:12px 0;}
+  th{text-align:left;background:var(--surface-2);padding:8px 12px;font-weight:700;font-size:12.5px;color:var(--ink-soft);}
+  td{padding:8px 12px;border-top:1px solid var(--border);vertical-align:top;}
+  code{background:var(--surface-2);padding:2px 6px;border-radius:4px;font-size:12.5px;}
+  .note{background:var(--warn-soft);color:var(--warn);border-radius:8px;padding:10px 14px;font-size:13px;margin:14px 0;}
+  .tip{background:var(--accent-soft);color:var(--accent);border-radius:8px;padding:10px 14px;font-size:13px;margin:14px 0;}
+</style>
+</head>
+<body>
+<div id="authGate">
+  <div id="authGateContent">
+    <h2>承認待ちです</h2>
+    <p>管理者の承認が完了すると利用できるようになります。しばらくしてからもう一度お試しください。</p>
+    <button id="authGateLogout">ログアウト</button>
+  </div>
+</div>
+
+<div class="topbar">
+  <a class="back" href="standard.html">← SO CRM に戻る</a>
+  <div class="brand">SO CRM 使い方ガイド</div>
+</div>
+
+<div class="wrap">
+  <p class="lead">このページはSO CRM（社内向け簡易CRM）の使い方をまとめたマニュアルです。左のリンクから各セクションに移動できます。</p>
+
+  <nav class="toc">
+    <h2>目次</h2>
+    <ol>
+      <li><a href="#login">ログイン・新規登録</a></li>
+      <li><a href="#approval">アカウント承認について</a></li>
+      <li><a href="#list">会社一覧</a></li>
+      <li><a href="#add">企業の追加（単体・CSV）</a></li>
+      <li><a href="#record">進捗の記録</a></li>
+      <li><a href="#edit">記録の編集・削除</a></li>
+      <li><a href="#board">案件ボード</a></li>
+      <li><a href="#calendar">カレンダー</a></li>
+      <li><a href="#summary">サマリー</a></li>
+      <li><a href="#admin">管理画面（担当者・案件など）</a></li>
+      <li><a href="#approvaladmin">承認管理（管理者のみ）</a></li>
+      <li><a href="#faq">よくある質問</a></li>
+    </ol>
+  </nav>
+
+  <section id="login">
+    <h2>1. ログイン・新規登録</h2>
+    <p>SO CRMは社内メールアドレス（<code>@sora1.jp</code>）を持つ人だけが使えます。</p>
+    <h3>初めて使う場合</h3>
+    <ol>
+      <li><code>signup.html</code>（新規登録画面）を開く</li>
+      <li>姓・名・メールアドレス・パスワード（8文字以上）を入力して登録</li>
+      <li>登録後は自動的にログイン状態になりますが、まだ画面は使えません（下記「アカウント承認について」参照）</li>
+    </ol>
+    <h3>2回目以降</h3>
+    <ol>
+      <li><code>login.html</code>（ログイン画面）を開く</li>
+      <li>登録したメールアドレスとパスワードでログイン</li>
+    </ol>
+  </section>
+
+  <section id="approval">
+    <h2>2. アカウント承認について</h2>
+    <p><span class="badge badge-warn">承認待ち</span> 新規登録しただけでは、まだ会社データを見ることができません。管理者が承認するまで「承認待ちです」という画面が表示されます。</p>
+    <div class="note">社内メールアドレスなら誰でも登録できますが、実際にデータを見られるのは管理者が承認した人だけです。登録したら、社内の管理者（最初はシステム管理担当者）に承認を依頼してください。</div>
+  </section>
+
+  <section id="list">
+    <h2>3. 会社一覧</h2>
+    <p>ログインすると表示される最初の画面です。取引先企業の一覧がテーブルで表示されます。</p>
+    <ul>
+      <li><strong>検索</strong>：会社名・業種でその場で絞り込み検索できます</li>
+      <li><strong>会社名クリック</strong>：その会社の詳細（進捗記録フォーム・履歴）が右からスライドして開きます</li>
+      <li>表の各列：会社名／業種／担当者／直近アプローチ日／進捗内容／確度／ネクストアクション／ネクストアクション日</li>
+    </ul>
+    <div class="tip">CSVインポートした直後や、まだ誰も進捗を記録していない会社は、担当者・アプローチ日が「-」で表示されます。誰かが進捗を記録すると、その内容に置き換わります。</div>
+  </section>
+
+  <section id="add">
+    <h2>4. 企業の追加（単体・CSV）</h2>
+    <h3>1件だけ追加する</h3>
+    <p>会社一覧の「＋ 企業を追加」ボタンから、会社名と業種（プルダウン）だけの簡単なフォームで追加できます。</p>
+    <h3>CSVで一括追加する</h3>
+    <p>「📥 CSV一括インポート」ボタンからCSVファイルを取り込めます。</p>
+    <table>
+      <thead><tr><th>ルール</th><th>内容</th></tr></thead>
+      <tbody>
+        <tr><td>1行目</td><td>ヘッダー行として無視されます</td></tr>
+        <tr><td>1列目</td><td>企業名</td></tr>
+        <tr><td>2列目</td><td>業種（固定の業種リストと文字が一致すれば自動選択、一致しない場合はプルダウンで選び直す）</td></tr>
+        <tr><td>文字コード</td><td>UTF-8 / Shift-JIS を自動判定します（Excelで作ったCSVでもそのまま使えます）</td></tr>
+      </tbody>
+    </table>
+    <p>単体追加・CSVインポートのどちらでも、追加された企業には自動で「未着手」の初期記録が1件作られます。</p>
+    <div class="note"><span class="badge badge-admin">管理者のみ</span> 企業の削除（1件・複数選択）は管理者権限を持つアカウントだけができます。一般アカウントには削除用のチェックボックスや削除ボタン自体が表示されません。</div>
+  </section>
+
+  <section id="record">
+    <h2>5. 進捗の記録</h2>
+    <p>会社一覧または案件ボードから会社を選ぶと、詳細パネルが開きます。「新しい進捗を記録」フォームに入力して記録します。</p>
+    <table>
+      <thead><tr><th>項目</th><th>必須</th><th>説明</th></tr></thead>
+      <tbody>
+        <tr><td>アプローチ日</td><td>必須</td><td>その進捗の対応日</td></tr>
+        <tr><td>担当者</td><td>必須</td><td>承認済みアカウントからプルダウンで選択（初期値はログイン中の自分）</td></tr>
+        <tr><td>進捗内容</td><td>必須</td><td>未着手／失注／20%〜100%の各段階／その他　から選択</td></tr>
+        <tr><td>確度</td><td>自動</td><td>進捗内容に応じて自動表示。「その他」を選んだ場合のみ自由入力（必須）</td></tr>
+        <tr><td>進捗詳細</td><td>任意</td><td>商談の内容などを自由記入</td></tr>
+        <tr><td>ネクストアクション／日</td><td>状況により必須</td><td>受注（100%）・失注のときは不要になり、入力欄が消えます</td></tr>
+        <tr><td>先方担当者の名前・連絡先</td><td>必須</td><td>取引先側の担当窓口の情報</td></tr>
+        <tr><td>稼働見込（時間）</td><td>任意</td><td>確定次第入力。売上見込は自動計算されます（<code>130,000円 + 4,300円 × 稼働見込</code>）</td></tr>
+      </tbody>
+    </table>
+    <div class="tip">サマリーの売上見込は、各会社の一番新しい記録だけを集計しています。新しく記録すれば古い記録の金額は自動的に上書きされ、二重に計上されることはありません。</div>
+  </section>
+
+  <section id="edit">
+    <h2>6. 記録の編集・削除</h2>
+    <p>会社情報（会社名・業種）は詳細パネルの上部から直接編集できます。</p>
+    <p>「これまでの記録」に並ぶ各進捗ログには「編集」「削除」ボタンがあります。</p>
+    <ul>
+      <li><strong>編集</strong>：フォームにその記録の内容が読み込まれ、更新モードになります（「更新する」ボタンで保存、「編集をキャンセル」で取りやめ）</li>
+      <li><strong>削除</strong>：確認ダイアログの後に削除されます。ただし、その会社の記録が1件しかない場合は削除できません（会社ごと削除したい場合は管理者に依頼してください）</li>
+    </ul>
+    <div class="note"><span class="badge badge-admin">管理者のみ</span> 会社ごと削除する「この会社を削除」ボタンは、詳細パネルの上部（会社情報編集の横）に管理者だけ表示されます。</div>
+  </section>
+
+  <section id="board">
+    <h2>7. 案件ボード</h2>
+    <p>会社を進捗内容（未着手〜受注／失注／その他）ごとに横並びのカンバン形式で表示します。列は横スクロールで見られます。カードをクリックすると詳細パネルが開きます。</p>
+  </section>
+
+  <section id="calendar">
+    <h2>8. カレンダー</h2>
+    <p>月表示のカレンダーで、ネクストアクション日にその会社名のチップが表示されます。</p>
+    <ul>
+      <li><strong>チップをクリック</strong>：その会社の詳細パネルが直接開きます</li>
+      <li><strong>日付の空白部分をクリック</strong>：その日にネクストアクションがある会社の一覧（会社名・担当者・アクション内容）がカレンダー下に表示されます</li>
+    </ul>
+  </section>
+
+  <section id="summary">
+    <h2>9. サマリー</h2>
+    <p>パイプライン全体の状況をグラフで確認できます。</p>
+    <table>
+      <thead><tr><th>項目</th><th>集計対象</th></tr></thead>
+      <tbody>
+        <tr><td>パイプライン件数／売上見込合計／受注件数／受注率／平均売上見込</td><td>すべての会社（未着手も含む）の最新記録</td></tr>
+        <tr><td>確度ごとの件数、月別アプローチ件数トレンド、担当者ごとの件数</td><td>未着手を除いた会社の最新記録</td></tr>
+        <tr><td>確度ごとの売上見込、担当者ごとの売上見込</td><td>すべての会社の最新記録（未着手は売上見込が無いため実質0円）</td></tr>
+        <tr><td>業種ごとの件数</td><td>すべての会社（未着手も含む）</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="admin">
+    <h2>10. 管理画面</h2>
+    <p>記録を「担当者ごと」「案件ごと」「確度ごと」「ネクストアクション日ごと」にグループ表示できます。担当者・日付が未設定の記録は一覧の一番下にまとまります。「⬇ CSVエクスポート」で表示中のデータをCSVとして書き出せます。</p>
+  </section>
+
+  <section id="approvaladmin">
+    <h2>11. 承認管理（管理者のみ）</h2>
+    <p><span class="badge badge-admin">管理者のみ</span> サイドバーに「⚙ 承認管理」リンクが表示されている場合のみアクセスできます。</p>
+    <ul>
+      <li>登録された全アカウントの氏名・メールアドレス・承認状態・権限が確認できます</li>
+      <li>「承認する」で新規登録者を有効化、「管理者にする」で管理者権限を付与できます</li>
+      <li>自分自身の管理者権限は解除できません（管理者が誰もいなくなる事故を防ぐため）</li>
+    </ul>
+  </section>
+
+  <section id="faq">
+    <h2>よくある質問</h2>
+    <h3>Q. 登録したのにログインできない</h3>
+    <p>A. 登録直後は「承認待ち」の状態です。管理者に承認してもらう必要があります。</p>
+    <h3>Q. CSVをインポートしたら文字が崩れた</h3>
+    <p>A. 文字コードは自動判定していますが、うまくいかない場合はページを一度再読み込みしてから再度お試しください。</p>
+    <h3>Q. 進捗の記録を間違えてしまった</h3>
+    <p>A. 「これまでの記録」の「編集」ボタンから直せます。誤って追加しただけなら「削除」も使えます（最後の1件だけは削除できません）。</p>
+    <h3>Q. 担当者プルダウンに自分の名前が出ない</h3>
+    <p>A. 管理者に承認されていないと担当者一覧に表示されません。承認状況を確認してください。</p>
+  </section>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  const SUPABASE_URL = 'https://qoaovyinizzwhfahcowz.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_HiBSZiuR9ZzHw67YloMvcw__vzYPm5S';
+  const client = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  (async function(){
+    const { data: sessionData } = await client.auth.getSession();
+    if(!sessionData.session){ location.href = 'login.html?redirect=help.html'; return; }
+    const uid = sessionData.session.user.id;
+    const { data: profile, error } = await client.from('profiles').select('approved').eq('id', uid).single();
+    if(error || !profile || !profile.approved){
+      document.getElementById('authGateContent').style.display='block';
+      document.getElementById('authGateLogout').addEventListener('click', async ()=>{ await client.auth.signOut(); location.href='login.html'; });
+      return;
+    }
+    document.getElementById('authGate').remove();
+  })();
+</script>
+</body>
+</html>
