@@ -191,7 +191,7 @@
   .donut-wrap{display:flex;align-items:center;gap:28px;flex-wrap:wrap;}
   .donut{position:relative;width:150px;height:150px;border-radius:50%;flex:none;}
   .donut-hole{position:absolute;top:24px;left:24px;width:102px;height:102px;border-radius:50%;background:var(--surface);}
-  .donut-legend{display:flex;flex-direction:column;gap:7px;font-size:12.5px;min-width:200px;}
+  .donut-legend{display:grid;grid-template-columns:repeat(2,minmax(160px,1fr));gap:7px 18px;font-size:12.5px;min-width:340px;}
   .donut-legend-item{display:flex;align-items:center;gap:8px;}
   .donut-swatch{width:10px;height:10px;border-radius:2px;flex:none;}
   .donut-legend-value{color:var(--ink-soft);margin-left:auto;font-variant-numeric:tabular-nums;padding-left:10px;}
