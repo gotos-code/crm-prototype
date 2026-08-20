@@ -61,6 +61,9 @@
   code{background:var(--surface-2);padding:2px 6px;border-radius:4px;font-size:12.5px;}
   .note{background:var(--warn-soft);color:var(--warn);border-radius:8px;padding:10px 14px;font-size:13px;margin:14px 0;}
   .tip{background:var(--accent-soft);color:var(--accent);border-radius:8px;padding:10px 14px;font-size:13px;margin:14px 0;}
+  .illust{margin:16px 0;border:1px solid var(--border);border-radius:10px;overflow:hidden;background:var(--surface);}
+  .illust svg{display:block;width:100%;height:auto;}
+  .illust-caption{font-size:11.5px;color:var(--ink-soft);text-align:center;padding:6px 0 10px;}
 </style>
 </head>
 <body>
@@ -112,6 +115,22 @@
       <li><code>login.html</code>（ログイン画面）を開く</li>
       <li>登録したメールアドレスとパスワードでログイン</li>
     </ol>
+    <div class="illust">
+      <svg viewBox="0 0 700 240" xmlns="http://www.w3.org/2000/svg">
+        <rect width="700" height="240" fill="var(--surface)"/>
+        <rect x="220" y="24" width="260" height="192" rx="12" fill="var(--bg)" stroke="var(--border)"/>
+        <text x="250" y="58" font-size="15" font-weight="700" fill="var(--ink)">SO CRM ログイン</text>
+        <text x="250" y="90" font-size="10" fill="var(--ink-soft)">メールアドレス</text>
+        <rect x="250" y="96" width="200" height="22" rx="5" fill="var(--surface)" stroke="var(--border)"/>
+        <text x="258" y="111" font-size="10" fill="var(--ink-soft)">you@sora1.jp</text>
+        <text x="250" y="136" font-size="10" fill="var(--ink-soft)">パスワード</text>
+        <rect x="250" y="142" width="200" height="22" rx="5" fill="var(--surface)" stroke="var(--border)"/>
+        <text x="258" y="157" font-size="10" fill="var(--ink-soft)">••••••••</text>
+        <rect x="250" y="176" width="200" height="26" rx="6" fill="var(--primary)"/>
+        <text x="350" y="193" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">ログイン</text>
+      </svg>
+      <div class="illust-caption">ログイン画面のイメージ（実際のレイアウトを簡略化した図です）</div>
+    </div>
   </section>
 
   <section id="approval">
@@ -128,6 +147,50 @@
       <li><strong>会社名クリック</strong>：その会社の詳細（進捗記録フォーム・履歴）が右からスライドして開きます</li>
       <li>表の各列：会社名／業種／担当者／直近アプローチ日／進捗内容／確度／ネクストアクション／ネクストアクション日</li>
     </ul>
+    <div class="illust">
+      <svg viewBox="0 0 700 220" xmlns="http://www.w3.org/2000/svg">
+        <rect width="700" height="220" fill="var(--surface)"/>
+        <rect x="20" y="16" width="220" height="22" rx="5" fill="var(--bg)" stroke="var(--border)"/>
+        <text x="30" y="31" font-size="10" fill="var(--ink-soft)">🔍 会社名・業種で検索</text>
+        <rect x="255" y="16" width="120" height="22" rx="5" fill="var(--primary)"/>
+        <text x="315" y="31" font-size="9.5" fill="#fff" text-anchor="middle" font-weight="700">＋ 企業を追加</text>
+        <rect x="388" y="16" width="140" height="22" rx="5" fill="var(--surface)" stroke="var(--border)"/>
+        <text x="458" y="31" font-size="9.5" fill="var(--ink)" text-anchor="middle">📥 CSV一括インポート</text>
+        <rect x="20" y="52" width="660" height="26" fill="var(--surface-2)"/>
+        <text x="34" y="69" font-size="9.5" font-weight="700" fill="var(--ink-soft)">会社名</text>
+        <text x="200" y="69" font-size="9.5" font-weight="700" fill="var(--ink-soft)">業種</text>
+        <text x="300" y="69" font-size="9.5" font-weight="700" fill="var(--ink-soft)">担当者</text>
+        <text x="400" y="69" font-size="9.5" font-weight="700" fill="var(--ink-soft)">進捗内容</text>
+        <text x="520" y="69" font-size="9.5" font-weight="700" fill="var(--ink-soft)">ネクストアクション日</text>
+        <g>
+          <rect x="20" y="78" width="660" height="34" fill="var(--surface)"/>
+          <text x="34" y="99" font-size="10" fill="var(--ink)">株式会社サンプル商事</text>
+          <text x="200" y="99" font-size="10" fill="var(--ink-soft)">IT</text>
+          <text x="300" y="99" font-size="10" fill="var(--ink-soft)">田中 花子</text>
+          <text x="400" y="99" font-size="10" fill="var(--ink-soft)">見積/先方と一定の目合わせ済み</text>
+          <rect x="520" y="86" width="90" height="18" rx="100" fill="var(--danger-soft)"/>
+          <text x="565" y="99" font-size="9" fill="var(--danger)" text-anchor="middle">期限超過 2日</text>
+        </g>
+        <g>
+          <rect x="20" y="112" width="660" height="34" fill="var(--surface-2)"/>
+          <text x="34" y="133" font-size="10" fill="var(--ink)">グリーンリーフ物流株式会社</text>
+          <text x="200" y="133" font-size="10" fill="var(--ink-soft)">物流</text>
+          <text x="300" y="133" font-size="10" fill="var(--ink-soft)">佐藤 一郎</text>
+          <text x="400" y="133" font-size="10" fill="var(--ink-soft)">受注/稼働確定、注文書済み</text>
+          <rect x="520" y="120" width="90" height="18" rx="100" fill="var(--accent-soft)"/>
+          <text x="565" y="133" font-size="9" fill="var(--accent)" text-anchor="middle">2026-08-24</text>
+        </g>
+        <g>
+          <rect x="20" y="146" width="660" height="34" fill="var(--surface)"/>
+          <text x="34" y="167" font-size="10" fill="var(--ink)">未来フードサービス株式会社</text>
+          <text x="200" y="167" font-size="10" fill="var(--ink-soft)">飲食</text>
+          <text x="300" y="167" font-size="10" fill="var(--ink-soft)">-</text>
+          <text x="400" y="167" font-size="10" fill="var(--ink-soft)">未着手</text>
+          <text x="565" y="167" font-size="10" fill="var(--ink-soft)" text-anchor="middle">-</text>
+        </g>
+      </svg>
+      <div class="illust-caption">会社一覧のイメージ。CSV取込直後などは担当者・日付が「-」表示になります</div>
+    </div>
     <div class="tip">CSVインポートした直後や、まだ誰も進捗を記録していない会社は、担当者・アプローチ日が「-」で表示されます。誰かが進捗を記録すると、その内容に置き換わります。</div>
   </section>
 
@@ -147,6 +210,38 @@
       </tbody>
     </table>
     <p>単体追加・CSVインポートのどちらでも、追加された企業には自動で「未着手」の初期記録が1件作られます。</p>
+    <div class="illust">
+      <svg viewBox="0 0 700 220" xmlns="http://www.w3.org/2000/svg">
+        <rect width="700" height="220" fill="var(--surface)"/>
+        <rect x="20" y="16" width="300" height="188" rx="10" fill="var(--bg)" stroke="var(--border)"/>
+        <text x="40" y="42" font-size="12" font-weight="700" fill="var(--ink)">企業を追加</text>
+        <text x="40" y="66" font-size="9.5" fill="var(--ink-soft)">会社名</text>
+        <rect x="40" y="72" width="260" height="20" rx="5" fill="var(--surface)" stroke="var(--border)"/>
+        <text x="48" y="86" font-size="9.5" fill="var(--ink-soft)">株式会社サンプル</text>
+        <text x="40" y="108" font-size="9.5" fill="var(--ink-soft)">業種</text>
+        <rect x="40" y="114" width="260" height="20" rx="5" fill="var(--surface)" stroke="var(--border)"/>
+        <text x="48" y="128" font-size="9.5" fill="var(--ink-soft)">IT ▾</text>
+        <rect x="40" y="150" width="260" height="24" rx="6" fill="var(--primary)"/>
+        <text x="170" y="167" font-size="10" font-weight="700" fill="#fff" text-anchor="middle">この内容で追加する</text>
+
+        <rect x="345" y="16" width="335" height="188" rx="10" fill="var(--bg)" stroke="var(--border)"/>
+        <text x="365" y="42" font-size="12" font-weight="700" fill="var(--ink)">CSV一括インポート</text>
+        <rect x="365" y="52" width="295" height="18" fill="var(--surface-2)"/>
+        <text x="373" y="65" font-size="8.5" font-weight="700" fill="var(--ink-soft)">企業名</text>
+        <text x="480" y="65" font-size="8.5" font-weight="700" fill="var(--ink-soft)">業種</text>
+        <rect x="365" y="70" width="295" height="20" fill="var(--surface)"/>
+        <text x="373" y="84" font-size="8.5" fill="var(--ink)">株式会社アオイ商事</text>
+        <rect x="480" y="74" width="70" height="14" rx="4" fill="var(--surface)" stroke="var(--border)"/>
+        <text x="486" y="84" font-size="8" fill="var(--ink-soft)">商社 ▾</text>
+        <rect x="365" y="90" width="295" height="20" fill="var(--surface-2)"/>
+        <text x="373" y="104" font-size="8.5" fill="var(--ink)">ノヴァテック株式会社</text>
+        <rect x="480" y="94" width="70" height="14" rx="4" fill="var(--warn-soft)" stroke="var(--warn)"/>
+        <text x="486" y="104" font-size="8" fill="var(--warn)">選択してください</text>
+        <rect x="365" y="150" width="295" height="24" rx="6" fill="var(--primary)"/>
+        <text x="512" y="167" font-size="10" font-weight="700" fill="#fff" text-anchor="middle">この内容でインポートする</text>
+      </svg>
+      <div class="illust-caption">左：単体追加フォーム／右：CSVインポートの確認画面（業種が一致しない行は選び直せます）</div>
+    </div>
     <div class="note"><span class="badge badge-admin">管理者のみ</span> 企業の削除（1件・複数選択）は管理者権限を持つアカウントだけができます。一般アカウントには削除用のチェックボックスや削除ボタン自体が表示されません。</div>
   </section>
 
@@ -166,6 +261,40 @@
         <tr><td>稼働見込（時間）</td><td>任意</td><td>確定次第入力。売上見込は自動計算されます（<code>130,000円 + 4,300円 × 稼働見込</code>）</td></tr>
       </tbody>
     </table>
+    <div class="illust">
+      <svg viewBox="0 0 700 260" xmlns="http://www.w3.org/2000/svg">
+        <rect width="700" height="260" fill="var(--surface)"/>
+        <rect x="40" y="14" width="620" height="232" rx="10" fill="var(--bg)" stroke="var(--border)"/>
+        <text x="60" y="38" font-size="12" font-weight="700" fill="var(--ink)">新しい進捗を記録</text>
+        <text x="60" y="58" font-size="9" fill="var(--ink-soft)">アプローチ日</text>
+        <rect x="60" y="63" width="270" height="18" rx="4" fill="var(--surface)" stroke="var(--border)"/>
+        <text x="345" y="58" font-size="9" fill="var(--ink-soft)">担当者</text>
+        <rect x="345" y="63" width="270" height="18" rx="4" fill="var(--surface)" stroke="var(--border)"/>
+        <text x="353" y="76" font-size="8.5" fill="var(--ink)">田中 花子 ▾</text>
+
+        <text x="60" y="98" font-size="9" fill="var(--ink-soft)">進捗内容</text>
+        <rect x="60" y="103" width="270" height="18" rx="4" fill="var(--surface)" stroke="var(--border)"/>
+        <text x="68" y="116" font-size="8.5" fill="var(--ink)">見積/先方と一定の目合わせ済み ▾</text>
+        <text x="345" y="98" font-size="9" fill="var(--ink-soft)">確度</text>
+        <rect x="345" y="103" width="270" height="18" rx="4" fill="var(--surface-2)" stroke="var(--border)"/>
+        <text x="353" y="116" font-size="8.5" fill="var(--ink-soft)">60%（自動）</text>
+
+        <text x="60" y="138" font-size="9" fill="var(--ink-soft)">先方担当者の名前／連絡先</text>
+        <rect x="60" y="143" width="270" height="18" rx="4" fill="var(--surface)" stroke="var(--border)"/>
+        <rect x="345" y="143" width="270" height="18" rx="4" fill="var(--surface)" stroke="var(--border)"/>
+
+        <text x="60" y="178" font-size="9" fill="var(--ink-soft)">稼働見込（時間）</text>
+        <rect x="60" y="183" width="270" height="18" rx="4" fill="var(--surface)" stroke="var(--border)"/>
+        <text x="68" y="196" font-size="8.5" fill="var(--ink)">40</text>
+        <text x="345" y="178" font-size="9" fill="var(--ink-soft)">売上見込</text>
+        <rect x="345" y="183" width="270" height="18" rx="4" fill="var(--accent-soft)" stroke="var(--border)"/>
+        <text x="353" y="196" font-size="8.5" fill="var(--accent)" font-weight="700">¥302,000（自動計算）</text>
+
+        <rect x="60" y="216" width="555" height="20" rx="5" fill="var(--primary)"/>
+        <text x="337" y="230" font-size="10" font-weight="700" fill="#fff" text-anchor="middle">この内容で記録する</text>
+      </svg>
+      <div class="illust-caption">進捗記録フォームのイメージ。確度は自動表示、売上見込は稼働見込から自動計算されます</div>
+    </div>
     <div class="tip">サマリーの売上見込は、各会社の一番新しい記録だけを集計しています。新しく記録すれば古い記録の金額は自動的に上書きされ、二重に計上されることはありません。</div>
   </section>
 
@@ -177,12 +306,67 @@
       <li><strong>編集</strong>：フォームにその記録の内容が読み込まれ、更新モードになります（「更新する」ボタンで保存、「編集をキャンセル」で取りやめ）</li>
       <li><strong>削除</strong>：確認ダイアログの後に削除されます。ただし、その会社の記録が1件しかない場合は削除できません（会社ごと削除したい場合は管理者に依頼してください）</li>
     </ul>
+    <div class="illust">
+      <svg viewBox="0 0 700 150" xmlns="http://www.w3.org/2000/svg">
+        <rect width="700" height="150" fill="var(--surface)"/>
+        <rect x="60" y="18" width="580" height="112" rx="10" fill="var(--bg)" stroke="var(--border)"/>
+        <text x="80" y="42" font-size="10" fill="var(--ink-soft)">2026-08-08　担当: 田中花子　　確度 60%</text>
+        <text x="80" y="62" font-size="10" fill="var(--ink)">進捗内容：見積/先方と一定の目合わせ済み</text>
+        <text x="80" y="80" font-size="10" fill="var(--ink)">ネクストアクション：稟議・社内検討/検討段階かを把握、進捗を把握（2026-08-25）</text>
+        <rect x="80" y="96" width="60" height="22" rx="5" fill="var(--surface)" stroke="var(--border)"/>
+        <text x="110" y="110" font-size="9" fill="var(--ink)" text-anchor="middle">編集</text>
+        <rect x="148" y="96" width="60" height="22" rx="5" fill="var(--danger-soft)" stroke="var(--danger)"/>
+        <text x="178" y="110" font-size="9" fill="var(--danger)" text-anchor="middle">削除</text>
+      </svg>
+      <div class="illust-caption">記録カードのイメージ。「編集」「削除」ボタンが各記録に付いています</div>
+    </div>
     <div class="note"><span class="badge badge-admin">管理者のみ</span> 会社ごと削除する「この会社を削除」ボタンは、詳細パネルの上部（会社情報編集の横）に管理者だけ表示されます。</div>
   </section>
 
   <section id="board">
     <h2>7. 案件ボード</h2>
     <p>会社を進捗内容（未着手〜受注／失注／その他）ごとに横並びのカンバン形式で表示します。列は横スクロールで見られます。カードをクリックすると詳細パネルが開きます。</p>
+    <div class="illust">
+      <svg viewBox="0 0 700 170" xmlns="http://www.w3.org/2000/svg">
+        <rect width="700" height="170" fill="var(--surface)"/>
+        <g>
+          <rect x="20" y="16" width="120" height="140" rx="8" fill="var(--bg)" stroke="var(--border)"/>
+          <text x="30" y="34" font-size="9" font-weight="700" fill="var(--ink-soft)">未着手</text>
+          <rect x="28" y="42" width="104" height="42" rx="5" fill="var(--surface)" stroke="var(--border)"/>
+          <text x="34" y="56" font-size="8" fill="var(--ink)">ノヴァテック</text>
+          <text x="34" y="68" font-size="7" fill="var(--ink-soft)">IT</text>
+          <rect x="28" y="90" width="104" height="42" rx="5" fill="var(--surface)" stroke="var(--border)"/>
+          <text x="34" y="104" font-size="8" fill="var(--ink)">未来フード</text>
+          <text x="34" y="116" font-size="7" fill="var(--ink-soft)">飲食</text>
+        </g>
+        <g>
+          <rect x="150" y="16" width="120" height="140" rx="8" fill="var(--bg)" stroke="var(--border)"/>
+          <text x="160" y="34" font-size="9" font-weight="700" fill="var(--ink-soft)">商談設定（20%）</text>
+          <rect x="158" y="42" width="104" height="42" rx="5" fill="var(--surface)" stroke="var(--border)"/>
+          <text x="164" y="56" font-size="8" fill="var(--ink)">ブルーウェーブ</text>
+          <text x="164" y="68" font-size="7" fill="var(--ink-soft)">IT</text>
+        </g>
+        <g>
+          <rect x="280" y="16" width="120" height="140" rx="8" fill="var(--bg)" stroke="var(--border)"/>
+          <text x="290" y="34" font-size="9" font-weight="700" fill="var(--ink-soft)">見積（60%）</text>
+          <rect x="288" y="42" width="104" height="42" rx="5" fill="var(--surface)" stroke="var(--border)"/>
+          <text x="294" y="56" font-size="8" fill="var(--ink)">アオイ商事</text>
+          <text x="294" y="68" font-size="7" fill="var(--ink-soft)">商社</text>
+        </g>
+        <g>
+          <rect x="410" y="16" width="120" height="140" rx="8" fill="var(--bg)" stroke="var(--border)"/>
+          <text x="420" y="34" font-size="9" font-weight="700" fill="var(--ink-soft)">受注（100%）</text>
+          <rect x="418" y="42" width="104" height="42" rx="5" fill="var(--surface)" stroke="var(--border)"/>
+          <text x="424" y="56" font-size="8" fill="var(--ink)">桜井建設</text>
+          <text x="424" y="68" font-size="7" fill="var(--ink-soft)">建設</text>
+        </g>
+        <g opacity="0.35">
+          <rect x="540" y="16" width="120" height="140" rx="8" fill="var(--bg)" stroke="var(--border)"/>
+        </g>
+        <text x="660" y="90" font-size="20" fill="var(--ink-soft)" text-anchor="middle">→</text>
+      </svg>
+      <div class="illust-caption">列は左から右へ横スクロールできます（右端の薄い列は「まだ画面外にある続きの列」を表しています）</div>
+    </div>
   </section>
 
   <section id="calendar">
@@ -192,6 +376,38 @@
       <li><strong>チップをクリック</strong>：その会社の詳細パネルが直接開きます</li>
       <li><strong>日付の空白部分をクリック</strong>：その日にネクストアクションがある会社の一覧（会社名・担当者・アクション内容）がカレンダー下に表示されます</li>
     </ul>
+    <div class="illust">
+      <svg viewBox="0 0 700 240" xmlns="http://www.w3.org/2000/svg">
+        <rect width="700" height="240" fill="var(--surface)"/>
+        <g font-size="9" fill="var(--ink-soft)" text-anchor="middle">
+          <text x="60" y="30">日</text><text x="160" y="30">月</text><text x="260" y="30">火</text><text x="360" y="30">水</text><text x="460" y="30">木</text><text x="560" y="30">金</text><text x="640" y="30">土</text>
+        </g>
+        <g>
+          <rect x="20" y="38" width="80" height="60" rx="4" fill="var(--calendar-cell-bg)" stroke="var(--border)"/>
+          <rect x="120" y="38" width="80" height="60" rx="4" fill="var(--calendar-cell-bg)" stroke="var(--border)"/>
+          <rect x="220" y="38" width="80" height="60" rx="4" fill="var(--calendar-cell-bg)" stroke="var(--primary)" stroke-width="2"/>
+          <text x="228" y="52" font-size="8" fill="var(--ink-soft)">18</text>
+          <rect x="226" y="58" width="66" height="12" rx="3" fill="var(--danger)"/>
+          <text x="259" y="67" font-size="6.5" fill="#fff" text-anchor="middle">アオイ商事</text>
+          <rect x="226" y="72" width="66" height="12" rx="3" fill="var(--primary)"/>
+          <text x="259" y="81" font-size="6.5" fill="#fff" text-anchor="middle">桜井建設</text>
+          <rect x="320" y="38" width="80" height="60" rx="4" fill="var(--calendar-cell-bg)" stroke="var(--border)"/>
+        </g>
+        <rect x="20" y="112" width="380" height="112" rx="8" fill="var(--bg)" stroke="var(--border)"/>
+        <text x="36" y="132" font-size="10" font-weight="700" fill="var(--ink)">2026年8月18日のネクストアクション（2件）</text>
+        <rect x="36" y="144" width="348" height="18" fill="var(--surface-2)"/>
+        <text x="42" y="157" font-size="8" fill="var(--ink-soft)">会社名</text>
+        <text x="180" y="157" font-size="8" fill="var(--ink-soft)">担当者</text>
+        <text x="270" y="157" font-size="8" fill="var(--ink-soft)">ネクストアクション</text>
+        <text x="42" y="180" font-size="9" fill="var(--ink)">株式会社アオイ商事</text>
+        <text x="180" y="180" font-size="9" fill="var(--ink-soft)">田中 花子</text>
+        <text x="270" y="180" font-size="9" fill="var(--ink-soft)">見積書を提出する</text>
+        <text x="42" y="202" font-size="9" fill="var(--ink)">桜井建設株式会社</text>
+        <text x="180" y="202" font-size="9" fill="var(--ink-soft)">佐藤 一郎</text>
+        <text x="270" y="202" font-size="9" fill="var(--ink-soft)">導入後フォローアップ</text>
+      </svg>
+      <div class="illust-caption">日付の空白部分をクリックすると、下にその日の一覧パネルが表示されます</div>
+    </div>
   </section>
 
   <section id="summary">
@@ -206,11 +422,76 @@
         <tr><td>業種ごとの件数</td><td>すべての会社（未着手も含む）</td></tr>
       </tbody>
     </table>
+    <div class="illust">
+      <svg viewBox="0 0 700 240" xmlns="http://www.w3.org/2000/svg">
+        <rect width="700" height="240" fill="var(--surface)"/>
+        <g>
+          <rect x="20" y="16" width="150" height="52" rx="6" fill="var(--bg)" stroke="var(--border)"/>
+          <text x="32" y="34" font-size="8" fill="var(--ink-soft)">パイプライン件数</text>
+          <text x="32" y="56" font-size="15" font-weight="700" fill="var(--ink)">42件</text>
+          <rect x="180" y="16" width="150" height="52" rx="6" fill="var(--bg)" stroke="var(--border)"/>
+          <text x="192" y="34" font-size="8" fill="var(--ink-soft)">売上見込合計</text>
+          <text x="192" y="56" font-size="15" font-weight="700" fill="var(--ink)">¥8,240,000</text>
+          <rect x="340" y="16" width="150" height="52" rx="6" fill="var(--bg)" stroke="var(--border)"/>
+          <text x="352" y="34" font-size="8" fill="var(--ink-soft)">受注率</text>
+          <text x="352" y="56" font-size="15" font-weight="700" fill="var(--ink)">24%</text>
+        </g>
+        <g>
+          <rect x="20" y="86" width="320" height="140" rx="8" fill="var(--bg)" stroke="var(--border)"/>
+          <text x="34" y="106" font-size="10" font-weight="700" fill="var(--ink)">確度ごとの件数</text>
+          <rect x="46" y="170" width="20" height="36" fill="var(--chart-blue)"/>
+          <rect x="86" y="150" width="20" height="56" fill="var(--chart-blue)"/>
+          <rect x="126" y="130" width="20" height="76" fill="var(--chart-blue)"/>
+          <rect x="166" y="180" width="20" height="26" fill="var(--chart-blue)"/>
+          <rect x="206" y="160" width="20" height="46" fill="var(--chart-blue)"/>
+          <rect x="246" y="190" width="20" height="16" fill="var(--chart-blue)"/>
+          <rect x="286" y="145" width="20" height="61" fill="var(--chart-blue)"/>
+        </g>
+        <g>
+          <text x="380" y="106" font-size="10" font-weight="700" fill="var(--ink)">業種ごとの件数</text>
+          <circle cx="440" cy="165" r="42" fill="var(--chart-blue)"/>
+          <path d="M440 165 L440 123 A42 42 0 0 1 476 186 Z" fill="var(--chart-coral)"/>
+          <path d="M440 165 L476 186 A42 42 0 0 1 425 206 Z" fill="var(--chart-green)"/>
+          <circle cx="440" cy="165" r="24" fill="var(--surface)"/>
+          <rect x="500" y="140" width="10" height="10" fill="var(--chart-blue)"/>
+          <text x="516" y="149" font-size="8" fill="var(--ink)">IT</text>
+          <rect x="500" y="158" width="10" height="10" fill="var(--chart-coral)"/>
+          <text x="516" y="167" font-size="8" fill="var(--ink)">商社</text>
+          <rect x="500" y="176" width="10" height="10" fill="var(--chart-green)"/>
+          <text x="516" y="185" font-size="8" fill="var(--ink)">建設</text>
+        </g>
+      </svg>
+      <div class="illust-caption">サマリー画面のイメージ（統計タイル、確度ごとの件数、業種ごとの内訳の一部）</div>
+    </div>
   </section>
 
   <section id="admin">
     <h2>10. 管理画面</h2>
     <p>記録を「担当者ごと」「案件ごと」「確度ごと」「ネクストアクション日ごと」にグループ表示できます。担当者・日付が未設定の記録は一覧の一番下にまとまります。「⬇ CSVエクスポート」で表示中のデータをCSVとして書き出せます。</p>
+    <div class="illust">
+      <svg viewBox="0 0 700 190" xmlns="http://www.w3.org/2000/svg">
+        <rect width="700" height="190" fill="var(--surface)"/>
+        <rect x="20" y="14" width="130" height="20" rx="100" fill="var(--primary)"/>
+        <text x="85" y="28" font-size="8.5" fill="#fff" text-anchor="middle">担当者ごと</text>
+        <rect x="158" y="14" width="110" height="20" rx="100" fill="var(--surface-2)"/>
+        <text x="213" y="28" font-size="8.5" fill="var(--ink-soft)" text-anchor="middle">案件ごと</text>
+        <rect x="276" y="14" width="110" height="20" rx="100" fill="var(--surface-2)"/>
+        <text x="331" y="28" font-size="8.5" fill="var(--ink-soft)" text-anchor="middle">確度ごと</text>
+        <rect x="580" y="12" width="100" height="22" rx="5" fill="var(--ink)"/>
+        <text x="630" y="27" font-size="8.5" fill="var(--bg)" text-anchor="middle">⬇ CSV書き出し</text>
+
+        <text x="20" y="58" font-size="10" font-weight="700" fill="var(--ink)">田中 花子（3件）</text>
+        <rect x="20" y="64" width="660" height="20" fill="var(--surface-2)"/>
+        <rect x="20" y="84" width="660" height="22" fill="var(--surface)"/>
+        <text x="30" y="98" font-size="8.5" fill="var(--ink)">株式会社アオイ商事</text>
+        <text x="240" y="98" font-size="8.5" fill="var(--ink-soft)">見積/先方と一定の目合わせ済み</text>
+
+        <text x="20" y="134" font-size="10" font-weight="700" fill="var(--ink-soft)">（未設定）（1件）</text>
+        <rect x="20" y="140" width="660" height="20" fill="var(--surface-2)" opacity="0.6"/>
+        <text x="30" y="153" font-size="8" fill="var(--ink-soft)">※ 担当者が未設定の記録は常に一番下に表示されます</text>
+      </svg>
+      <div class="illust-caption">管理画面のイメージ。「（未設定）」グループは常に最下部に固定されます</div>
+    </div>
   </section>
 
   <section id="approvaladmin">
@@ -221,6 +502,38 @@
       <li>「承認する」で新規登録者を有効化、「管理者にする」で管理者権限を付与できます</li>
       <li>自分自身の管理者権限は解除できません（管理者が誰もいなくなる事故を防ぐため）</li>
     </ul>
+    <div class="illust">
+      <svg viewBox="0 0 700 150" xmlns="http://www.w3.org/2000/svg">
+        <rect width="700" height="150" fill="var(--surface)"/>
+        <rect x="20" y="16" width="660" height="24" fill="var(--surface-2)"/>
+        <text x="34" y="32" font-size="8.5" font-weight="700" fill="var(--ink-soft)">氏名</text>
+        <text x="180" y="32" font-size="8.5" font-weight="700" fill="var(--ink-soft)">メールアドレス</text>
+        <text x="360" y="32" font-size="8.5" font-weight="700" fill="var(--ink-soft)">状態</text>
+        <text x="440" y="32" font-size="8.5" font-weight="700" fill="var(--ink-soft)">権限</text>
+        <text x="520" y="32" font-size="8.5" font-weight="700" fill="var(--ink-soft)">操作</text>
+
+        <rect x="20" y="40" width="660" height="30" fill="var(--surface)"/>
+        <text x="34" y="59" font-size="9" fill="var(--ink)">鈴木 一郎</text>
+        <text x="180" y="59" font-size="9" fill="var(--ink-soft)">suzuki.i@sora1.jp</text>
+        <rect x="360" y="49" width="60" height="16" rx="100" fill="var(--warn-soft)"/>
+        <text x="390" y="60" font-size="7.5" fill="var(--warn)" text-anchor="middle">承認待ち</text>
+        <rect x="440" y="49" width="50" height="16" rx="100" fill="var(--surface-2)"/>
+        <text x="465" y="60" font-size="7.5" fill="var(--ink-soft)" text-anchor="middle">一般</text>
+        <rect x="520" y="47" width="66" height="18" rx="5" fill="var(--primary)"/>
+        <text x="553" y="59" font-size="7.5" fill="#fff" text-anchor="middle">承認する</text>
+
+        <rect x="20" y="76" width="660" height="30" fill="var(--surface-2)"/>
+        <text x="34" y="95" font-size="9" fill="var(--ink)">田中 花子</text>
+        <text x="180" y="95" font-size="9" fill="var(--ink-soft)">tanaka.h@sora1.jp</text>
+        <rect x="360" y="85" width="60" height="16" rx="100" fill="var(--accent-soft)"/>
+        <text x="390" y="96" font-size="7.5" fill="var(--accent)" text-anchor="middle">承認済み</text>
+        <rect x="440" y="85" width="50" height="16" rx="100" fill="var(--primary)"/>
+        <text x="465" y="96" font-size="7.5" fill="#fff" text-anchor="middle">管理者</text>
+        <rect x="520" y="83" width="66" height="18" rx="5" fill="var(--surface)" stroke="var(--border)"/>
+        <text x="553" y="95" font-size="7.5" fill="var(--ink)" text-anchor="middle">承認取消</text>
+      </svg>
+      <div class="illust-caption">承認管理画面のイメージ。承認・管理者権限の付与をここで行います</div>
+    </div>
   </section>
 
   <section id="faq">
