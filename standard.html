@@ -754,7 +754,8 @@
           '</div>';
       }).join('') + '</div>');
   }
-  const CATEGORICAL_COLORS = ['var(--chart-blue)','var(--chart-coral)','var(--chart-green)','var(--chart-purple)','var(--chart-amber)','var(--chart-teal)','#B7A88E','#8FA6A0'];
+  const CATEGORICAL_COLORS = ['var(--chart-blue)','var(--chart-coral)','var(--chart-green)','var(--chart-purple)','var(--chart-amber)','var(--chart-teal)',
+    '#B7A88E','#8FA6A0','#C77DA6','#7D9BC7','#A0B23A','#D98B5F','#6FAFA0','#B08FD9','#C4A0C2'];
   function renderLineChart(containerId, items, colorVar){
     const color = 'var('+(colorVar||'--primary')+')';
     const max = Math.max.apply(null, items.map(i=>i.value).concat([1]));
@@ -830,15 +831,10 @@
     renderVBarChart('summaryOwnerCountChart', ownerKeys.map((o,i)=>({label:ownerLabel(o), value:ownerCounts[i], display:ownerCounts[i]+'件'})), '--chart-amber');
     renderVBarChart('summaryOwnerRevenueChart', ownerKeys.map((o,i)=>({label:ownerLabel(o), value:ownerRevenues[i], display:formatYen(ownerRevenues[i])||'¥0'})), '--chart-teal');
 
-    // 業種ごと（構成比なのでドーナツ。多い場合は上位6件＋その他にまとめる）
+    // 業種ごと（構成比なのでドーナツ。業種は最大15種類の固定リストなので全件そのまま表示）
     const industryKeys = Array.from(new Set(companies.map(c=>c.industry)));
     let industryItems = industryKeys.map(ind=>({label:ind, value:companies.filter(c=>c.industry===ind).length}))
       .sort((a,b)=>b.value-a.value);
-    if(industryItems.length>7){
-      const top = industryItems.slice(0,6);
-      const restTotal = industryItems.slice(6).reduce((s,i)=>s+i.value,0);
-      industryItems = top.concat([{label:'その他', value:restTotal}]);
-    }
     renderDonutChart('summaryIndustryChart', industryItems);
   }
 
