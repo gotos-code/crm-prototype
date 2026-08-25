@@ -6,7 +6,7 @@
   <div id="authGateContent" style="display:none;text-align:center;max-width:340px;padding:20px;">
     <h2 style="font-size:16px;margin:0 0 10px;color:#1E2430;">承認待ちです</h2>
     <p style="font-size:13px;color:#5B6273;margin:0 0 18px;">管理者の承認が完了すると利用できるようになります。しばらくしてからもう一度お試しください。</p>
-    <button id="authGateLogout" style="font-family:inherit;font-weight:700;font-size:13px;padding:9px 16px;border-radius:6px;border:1px solid #223A70;background:#223A70;color:#fff;cursor:pointer;">ログアウト</button>
+    <button id="authGateLogout" style="font-family:inherit;font-weight:700;font-size:13px;padding:9px 16px;border-radius:6px;border:1px solid #9C2F5C;background:#9C2F5C;color:#fff;cursor:pointer;">ログアウト</button>
   </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -32,13 +32,13 @@
   :root{
     --bg:#F5F4EF; --surface:#FFFFFF; --surface-2:#EEECE4;
     --ink:#1E2430; --ink-soft:#5B6273; --border:#DEDAD0;
-    --primary:#223A70; --primary-ink:#FFFFFF; --primary-soft:#E7EBF5;
+    --primary:#9C2F5C; --primary-ink:#FFFFFF; --primary-soft:#F8E1EA;
     --accent:#2E7D6B; --accent-soft:#E3EFEA;
     --warn:#C77A1E; --warn-soft:#FBEBD6;
     --danger:#B23A2E; --danger-soft:#F7E1DD;
     --chart-blue:#8FB6E8; --chart-green:#8ED4B3; --chart-purple:#B6A6E0; --chart-amber:#EFC178; --chart-teal:#7FCFC4; --chart-coral:#E9A0A0;
-    --sidebar-bg:#2E5AA8; --sidebar-ink:#FFFFFF;
-    --calendar-cell-bg:#E9F1FF;
+    --sidebar-bg:#AD3D6C; --sidebar-ink:#FFFFFF;
+    --calendar-cell-bg:#FCE4EE;
     --radius:6px;
     --font: "Hiragino Maru Gothic ProN", "Kosugi Maru", -apple-system, "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Yu Gothic", "Segoe UI", Meiryo, sans-serif;
   }
@@ -46,36 +46,36 @@
     :root{
       --bg:#171B22; --surface:#1E232C; --surface-2:#262C36;
       --ink:#E7E9ED; --ink-soft:#9AA2B1; --border:#333A46;
-      --primary:#7C93C9; --primary-ink:#141821; --primary-soft:#232B3D;
+      --primary:#D98CAE; --primary-ink:#141821; --primary-soft:#3D2531;
       --accent:#5FAF9A; --accent-soft:#1E2E2A;
       --warn:#E0A857; --warn-soft:#3A2E1C;
       --danger:#E28A7C; --danger-soft:#3A2320;
       --chart-blue:#6E93C4; --chart-green:#5FAE87; --chart-purple:#9483CE; --chart-amber:#D9A257; --chart-teal:#4FA79D; --chart-coral:#CF7E7E;
-      --sidebar-bg:#4A6FB5; --sidebar-ink:#FFFFFF;
-      --calendar-cell-bg:#182A45;
+      --sidebar-bg:#BD5480; --sidebar-ink:#FFFFFF;
+      --calendar-cell-bg:#3A2230;
     }
   }
   :root[data-theme="dark"]{
     --bg:#171B22; --surface:#1E232C; --surface-2:#262C36;
     --ink:#E7E9ED; --ink-soft:#9AA2B1; --border:#333A46;
-    --primary:#7C93C9; --primary-ink:#141821; --primary-soft:#232B3D;
+    --primary:#D98CAE; --primary-ink:#141821; --primary-soft:#3D2531;
     --accent:#5FAF9A; --accent-soft:#1E2E2A;
     --warn:#E0A857; --warn-soft:#3A2E1C;
     --danger:#E28A7C; --danger-soft:#3A2320;
     --chart-blue:#6E93C4; --chart-green:#5FAE87; --chart-purple:#9483CE; --chart-amber:#D9A257; --chart-teal:#4FA79D; --chart-coral:#CF7E7E;
-    --sidebar-bg:#4A6FB5; --sidebar-ink:#FFFFFF;
-    --calendar-cell-bg:#182A45;
+    --sidebar-bg:#BD5480; --sidebar-ink:#FFFFFF;
+    --calendar-cell-bg:#3A2230;
   }
   :root[data-theme="light"]{
     --bg:#F5F4EF; --surface:#FFFFFF; --surface-2:#EEECE4;
     --ink:#1E2430; --ink-soft:#5B6273; --border:#DEDAD0;
-    --primary:#223A70; --primary-ink:#FFFFFF; --primary-soft:#E7EBF5;
+    --primary:#9C2F5C; --primary-ink:#FFFFFF; --primary-soft:#F8E1EA;
     --accent:#2E7D6B; --accent-soft:#E3EFEA;
     --warn:#C77A1E; --warn-soft:#FBEBD6;
     --danger:#B23A2E; --danger-soft:#F7E1DD;
     --chart-blue:#8FB6E8; --chart-green:#8ED4B3; --chart-purple:#B6A6E0; --chart-amber:#EFC178; --chart-teal:#7FCFC4; --chart-coral:#E9A0A0;
-    --sidebar-bg:#2E5AA8; --sidebar-ink:#FFFFFF;
-    --calendar-cell-bg:#E9F1FF;
+    --sidebar-bg:#AD3D6C; --sidebar-ink:#FFFFFF;
+    --calendar-cell-bg:#FCE4EE;
   }
   *{box-sizing:border-box;}
   body{margin:0;font-family:var(--font);color:var(--ink);background:var(--bg);font-size:14px;line-height:1.6;}
@@ -702,7 +702,7 @@
         { header: '業種', key: 'industry', width: 16 }
       ];
       ws.getRow(1).font = { bold: true };
-      ws.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2E5AA8' } };
+      ws.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF9C2F5C' } };
       ws.getRow(1).eachCell(c => { c.font = { bold: true, color: { argb: 'FFFFFFFF' } }; });
       const industryListFormula = '"' + INDUSTRY_OPTIONS.join(',') + '"';
       ws.dataValidations.add('B2:B300', {
