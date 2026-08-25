@@ -10,6 +10,7 @@
   </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
 <script>
   window.__SUPA = window.supabase.createClient('https://qoaovyinizzwhfahcowz.supabase.co','sb_publishable_HiBSZiuR9ZzHw67YloMvcw__vzYPm5S');
   window.__CRM_AUTH_PROMISE = (async function(){
@@ -418,12 +419,14 @@
       <button class="close-x" id="closeImport">✕</button>
     </div>
     <div class="drawer-body">
-      <div class="subhead">CSVファイルを選択</div>
+      <div class="subhead">CSV / Excelファイルを選択</div>
       <p style="font-size:12.5px;color:var(--ink-soft);margin:0 0 10px;">
         1行目はヘッダー行として無視されます。2行目以降、<strong>1列目=企業名、2列目=業種</strong>の順で記載してください。<br>
         例）<code>企業名,業種</code> / <code>株式会社サンプル,IT</code>
       </p>
-      <input type="file" id="importFile" accept=".csv,text/csv">
+      <button class="btn" id="downloadTemplateBtn" type="button" style="margin-bottom:12px;">📄 雛形（Excel）をダウンロード</button>
+      <p style="font-size:12px;color:var(--ink-soft);margin:-6px 0 12px;">業種列はプルダウンから選択できます。入力後、そのまま.xlsxファイルをアップロードできます（CSVに変換する必要はありません）。</p>
+      <input type="file" id="importFile" accept=".csv,text/csv,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
       <div id="importSummary" style="margin-top:14px;"></div>
       <div class="table-scroll" style="margin-top:10px;">
         <table id="importTable" style="display:none;">
@@ -687,6 +690,39 @@
   });
   document.getElementById('closeImport').addEventListener('click', ()=>{ document.getElementById('importOverlay').classList.remove('open'); });
   document.getElementById('importOverlay').addEventListener('click', e=>{ if(e.target.id==='importOverlay') document.getElementById('importOverlay').classList.remove('open'); });
+  document.getElementById('downloadTemplateBtn').addEventListener('click', async ()=>{
+    const btn = document.getElementById('downloadTemplateBtn');
+    btn.disabled = true;
+    try {
+      const wb = new ExcelJS.Workbook();
+      const ws = wb.addWorksheet('企業インポート');
+      ws.columns = [
+        { header: '企業名', key: 'name', width: 32 },
+        { header: '業種', key: 'industry', width: 16 }
+      ];
+      ws.getRow(1).font = { bold: true };
+      ws.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2E5AA8' } };
+      ws.getRow(1).eachCell(c => { c.font = { bold: true, color: { argb: 'FFFFFFFF' } }; });
+      const industryListFormula = '"' + INDUSTRY_OPTIONS.join(',') + '"';
+      ws.dataValidations.add('B2:B300', {
+        type: 'list', allowBlank: true, formulae: [industryListFormula],
+        showErrorMessage: true, errorTitle: '入力エラー', error: 'プルダウンから業種を選択してください。'
+      });
+      ws.getCell('D1').value = '記入例：株式会社サンプル ／ IT（B列はプルダウンから選択してください）';
+      ws.getCell('D1').font = { italic: true, color: { argb: 'FF5B6273' } };
+      ws.getCell('D1').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFFF' } };
+      ws.getColumn(4).width = 55;
+      const buffer = await wb.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'crm_import_template.xlsx';
+      document.body.appendChild(a); a.click(); a.remove();
+      URL.revokeObjectURL(url);
+    } finally {
+      btn.disabled = false;
+    }
+  });
   function decodeCsvBuffer(buffer){
     try {
       // 正当なUTF-8ならそのまま使う（不正なバイト列があれば例外を投げさせる）
@@ -696,23 +732,42 @@
       return new TextDecoder('shift_jis').decode(buffer);
     }
   }
+  function applyImportRows(rows){
+    const dataRows = rows.slice(1); // 1行目はヘッダーとして無視
+    importRowsData = dataRows.filter(c=>c[0]).map(c=>{
+      const name = c[0] || '';
+      const rawIndustry = (c[1]||'').trim();
+      const matched = INDUSTRY_OPTIONS.find(o=>o===rawIndustry);
+      return { name, industry: matched || '' };
+    });
+    const unmatched = importRowsData.filter(r=>!r.industry).length;
+    document.getElementById('importSummary').textContent = importRowsData.length+'件読み込みました。'+(unmatched>0 ? '（業種が一致しなかった行が'+unmatched+'件あります。プルダウンで選択してください）' : '');
+    renderImportTable();
+  }
+  async function parseXlsxFile(file){
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.load(await file.arrayBuffer());
+    const ws = wb.worksheets[0];
+    const rows = [];
+    ws.eachRow({ includeEmpty: false }, row => {
+      const cells = [row.getCell(1).text || '', row.getCell(2).text || ''];
+      rows.push(cells.map(c=>String(c).trim()));
+    });
+    return rows;
+  }
   document.getElementById('importFile').addEventListener('change', (e)=>{
     const file = e.target.files[0];
     if(!file) return;
+    const isXlsx = /\.xlsx$/i.test(file.name) || file.type==='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+    if(isXlsx){
+      parseXlsxFile(file).then(applyImportRows);
+      return;
+    }
     const reader = new FileReader();
     reader.onload = () => {
       const text = decodeCsvBuffer(reader.result);
       const rows = parseCSV(text);
-      const dataRows = rows.slice(1); // 1行目はヘッダーとして無視
-      importRowsData = dataRows.filter(c=>c[0]).map(c=>{
-        const name = c[0] || '';
-        const rawIndustry = (c[1]||'').trim();
-        const matched = INDUSTRY_OPTIONS.find(o=>o===rawIndustry);
-        return { name, industry: matched || '' };
-      });
-      const unmatched = importRowsData.filter(r=>!r.industry).length;
-      document.getElementById('importSummary').textContent = importRowsData.length+'件読み込みました。'+(unmatched>0 ? '（業種が一致しなかった行が'+unmatched+'件あります。プルダウンで選択してください）' : '');
-      renderImportTable();
+      applyImportRows(rows);
     };
     reader.readAsArrayBuffer(file);
   });
