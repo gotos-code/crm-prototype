@@ -463,6 +463,7 @@
   function ownerLabel(email){ return PROFILE_MAP[email] || (email ? email.split('@')[0] : '-'); }
 
   const INDUSTRY_OPTIONS = ['商社','製造業','飲食','物流','デザイン','建設','IT','医療','流通','小売','金融','不動産','教育','人材','その他'];
+  const CRM_CATEGORY = 'dormant'; // 既存顧客・休眠顧客でデータを分離するためのタグ
 
   const STAGES = [
     { stage:'未着手', confidence:'未着手', rate:0 },
@@ -485,6 +486,7 @@
     const { data, error } = await window.__SUPA
       .from('companies')
       .select('id,name,industry,company_logs(id,log_date,owner_email,progress,stage,confidence_label,progress_text,next_action,next_date,contact_name,contact_info,expected_hours,expected_revenue,created_at)')
+      .eq('category', CRM_CATEGORY)
       .order('id');
     if(error){ alert('データの読み込みに失敗しました：'+error.message); return []; }
     return data.map(c=>({
@@ -668,7 +670,7 @@
     if(!name || !industry){ alert('会社名と業種は必須です'); return; }
     const btn = document.getElementById('submitAddCompany');
     btn.disabled = true; btn.textContent = '追加中…';
-    const { data: newCompany, error } = await window.__SUPA.from('companies').insert({ name, industry }).select().single();
+    const { data: newCompany, error } = await window.__SUPA.from('companies').insert({ name, industry, category: CRM_CATEGORY }).select().single();
     if(!error && newCompany){
       await window.__SUPA.from('company_logs').insert({
         company_id: newCompany.id, stage: '未着手', confidence_label: '未着手', progress: 0
@@ -780,7 +782,7 @@
     btn.disabled = true; btn.textContent = 'インポート中…';
     let success = 0, failed = 0;
     for(const row of importRowsData){
-      const { data: newCompany, error } = await window.__SUPA.from('companies').insert({ name: row.name, industry: row.industry }).select().single();
+      const { data: newCompany, error } = await window.__SUPA.from('companies').insert({ name: row.name, industry: row.industry, category: CRM_CATEGORY }).select().single();
       if(error || !newCompany){ failed++; continue; }
       const { error: logError } = await window.__SUPA.from('company_logs').insert({
         company_id: newCompany.id,
