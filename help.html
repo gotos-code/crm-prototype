@@ -76,7 +76,7 @@
 </div>
 
 <div class="topbar">
-  <a class="back" href="standard.html">← SO CRM に戻る</a>
+  <a class="back" id="backLink" href="standard.html">← SO CRM に戻る</a>
   <div class="brand">SO CRM 使い方ガイド</div>
 </div>
 
@@ -554,6 +554,9 @@
   const SUPABASE_URL = 'https://qoaovyinizzwhfahcowz.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_HiBSZiuR9ZzHw67YloMvcw__vzYPm5S';
   const client = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  const requestedFrom = new URLSearchParams(location.search).get('from');
+  const backTarget = ['standard.html','dormant.html'].includes(requestedFrom) ? requestedFrom : 'standard.html';
+  document.getElementById('backLink').href = backTarget;
   (async function(){
     const { data: sessionData } = await client.auth.getSession();
     if(!sessionData.session){ location.href = 'login.html?redirect=help.html'; return; }
