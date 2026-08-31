@@ -229,6 +229,20 @@
 
       <!-- SUMMARY VIEW -->
       <div class="view" id="view-summary">
+        <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:6px;">
+          <div class="mini-tabs" id="summaryModeTabs">
+            <div class="mini-tab active" data-mode="total">トータル</div>
+            <div class="mini-tab" data-mode="monthly">月次</div>
+          </div>
+          <div id="summaryMonthNav" style="display:none;align-items:center;gap:8px;font-size:13px;font-weight:700;">
+            <button class="btn btn-sm" id="summaryMonthPrev" type="button">◀</button>
+            <span id="summaryMonthLabel"></span>
+            <button class="btn btn-sm" id="summaryMonthNext" type="button">▶</button>
+          </div>
+        </div>
+        <div id="summaryMonthNote" style="display:none;font-size:12px;color:var(--ink-soft);margin-bottom:14px;">
+          ※ 件数系はこの月にアプローチ日がある記録を、売上見込系は稼働開始予定〜稼働終了予定を営業日で日割りしたこの月分の金額を集計します（稼働開始・終了予定が未入力の会社の売上見込は月次には含まれません）。
+        </div>
         <div class="stat-row" id="statRow"></div>
         <div class="summary-grid2">
           <div class="panel">
@@ -530,6 +544,8 @@
   let editingLogId = null;
   let calDate = new Date();
   let forecastViewMode = 'monthly';
+  let summaryViewMode = 'total';
+  let summaryMonthDate = new Date();
 
   function latestLog(c){ return c.logs[c.logs.length-1]; }
   function daysDiff(dateStr){
@@ -952,28 +968,46 @@
     }
     return result;
   }
+  function monthOverlapRevenue(c, monthKey){
+    const l = latestLog(c);
+    if(l && l.workStart && l.workEnd && l.expectedRevenue!=null){
+      return prorateRevenueByMonth(l.workStart, l.workEnd, l.expectedRevenue)[monthKey];
+    }
+    return undefined;
+  }
   function renderSummary(){
-    const rows = companies.map(c=>({c, l: latestLog(c)}));
+    const latestRows = companies.map(c=>({c, l: latestLog(c)}));
+    const monthKey = summaryMonthDate.getFullYear()+'-'+String(summaryMonthDate.getMonth()+1).padStart(2,'0');
+    document.getElementById('summaryMonthLabel').textContent = summaryMonthDate.getFullYear()+'年'+(summaryMonthDate.getMonth()+1)+'月';
+
+    // 件数系は「その月にアプローチ日がある記録」、売上系は「稼働開始〜終了予定をその月に営業日で日割りした金額」を使う
+    const countRows = summaryViewMode==='monthly'
+      ? companies.flatMap(c=>c.logs.filter(l=>(l.date||'').slice(0,7)===monthKey).map(l=>({c,l})))
+      : latestRows;
+    const revenueRows = summaryViewMode==='monthly'
+      ? companies.map(c=>({c, l: latestLog(c), monthRevenue: monthOverlapRevenue(c, monthKey)})).filter(r=>r.monthRevenue!=null)
+      : latestRows.map(r=>({c:r.c, l:r.l, monthRevenue:r.l.expectedRevenue}));
+
     const chartStages = [STAGES[0], STAGES[2], STAGES[3], STAGES[4], STAGES[5], STAGES[6], STAGES[7], STAGES[1], {stage:OTHER_STAGE, confidence:'—'}];
-    const counts = chartStages.map(s=> rows.filter(r=>r.l.stage===s.stage).length);
-    const revenues = chartStages.map(s=> rows.filter(r=>r.l.stage===s.stage).reduce((sum,r)=> sum + (r.l.expectedRevenue||0), 0));
-    const totalCount = rows.length;
-    const totalRevenue = rows.reduce((sum,r)=> sum + (r.l.expectedRevenue||0), 0);
-    const wonCount = rows.filter(r=>r.l.stage==='受注/稼働確定、注文書済み').length;
+    const revenues = chartStages.map(s=> revenueRows.filter(r=>r.l.stage===s.stage).reduce((sum,r)=> sum + (r.monthRevenue||0), 0));
+    const totalCount = countRows.length;
+    const totalRevenue = revenueRows.reduce((sum,r)=> sum + (r.monthRevenue||0), 0);
+    const wonCount = countRows.filter(r=>r.l.stage==='受注/稼働確定、注文書済み').length;
     const winRate = totalCount>0 ? Math.round(wonCount/totalCount*100) : null;
-    const revenueEntries = rows.filter(r=>r.l.expectedRevenue!=null);
-    const avgRevenue = revenueEntries.length>0 ? revenueEntries.reduce((s,r)=>s+r.l.expectedRevenue,0)/revenueEntries.length : null;
+    const revenueRowsWithValue = summaryViewMode==='monthly' ? revenueRows : revenueRows.filter(r=>r.monthRevenue!=null);
+    const avgRevenue = revenueRowsWithValue.length>0 ? revenueRowsWithValue.reduce((s,r)=>s+r.monthRevenue,0)/revenueRowsWithValue.length : null;
+    const monthly = summaryViewMode==='monthly';
 
     document.getElementById('statRow').innerHTML =
-      '<div class="stat-tile"><div class="label">パイプライン件数</div><div class="value">'+totalCount+'件</div></div>'+
-      '<div class="stat-tile"><div class="label">売上見込合計</div><div class="value">'+formatYen(totalRevenue)+'</div></div>'+
-      '<div class="stat-tile"><div class="label">受注件数</div><div class="value">'+wonCount+'件</div></div>'+
-      '<div class="stat-tile"><div class="label">受注率（受注÷着手数）</div><div class="value">'+(winRate!=null?winRate+'%':'—')+'</div></div>'+
-      '<div class="stat-tile"><div class="label">平均売上見込（件あたり）</div><div class="value">'+(avgRevenue!=null?formatYen(avgRevenue):'—')+'</div></div>';
+      '<div class="stat-tile"><div class="label">'+(monthly?'アプローチ件数（月次）':'パイプライン件数')+'</div><div class="value">'+totalCount+'件</div></div>'+
+      '<div class="stat-tile"><div class="label">売上見込合計'+(monthly?'（月次）':'')+'</div><div class="value">'+formatYen(totalRevenue)+'</div></div>'+
+      '<div class="stat-tile"><div class="label">受注件数'+(monthly?'（月次）':'')+'</div><div class="value">'+wonCount+'件</div></div>'+
+      '<div class="stat-tile"><div class="label">受注率（受注÷'+(monthly?'アプローチ件数':'着手数')+'）</div><div class="value">'+(winRate!=null?winRate+'%':'—')+'</div></div>'+
+      '<div class="stat-tile"><div class="label">平均売上見込（件あたり'+(monthly?'・月次':'')+'）</div><div class="value">'+(avgRevenue!=null?formatYen(avgRevenue):'—')+'</div></div>';
 
     // 確度ごとの件数は未着手を除く（未着手はまだ何も進んでいないため）
     const countChartStages = chartStages.filter(s=>s.stage!=='未着手');
-    const countsExclNotStarted = countChartStages.map(s=> rows.filter(r=>r.l.stage===s.stage).length);
+    const countsExclNotStarted = countChartStages.map(s=> countRows.filter(r=>r.l.stage===s.stage).length);
     renderVBarChart('summaryCountChart', countChartStages.map((s,i)=>({label:shortStageLabel(s.stage)+'（'+s.confidence+'）', value:countsExclNotStarted[i], display:countsExclNotStarted[i]+'件'})), '--chart-blue');
     renderVBarChart('summaryRevenueChart', chartStages.map((s,i)=>({label:shortStageLabel(s.stage)+'（'+s.confidence+'）', value:revenues[i], display:formatYen(revenues[i])||'¥0'})), '--chart-green');
 
@@ -985,23 +1019,23 @@
     const trendCounts = months.map(k=> allLogs.filter(l=> (l.date||'').slice(0,7)===k).length);
     renderLineChart('summaryTrendChart', months.map((k,i)=>({label:parseInt(k.slice(5,7))+'月', value:trendCounts[i], display:trendCounts[i]+'件'})), '--chart-purple');
 
-    // 担当者ごと（件数は未着手を除く。売上見込は従来通り全体）
-    const activeRows = rows.filter(r=>r.l.stage!=='未着手');
+    // 担当者ごと（件数は未着手を除く）
+    const activeRows = countRows.filter(r=>r.l.stage!=='未着手');
     const ownerKeys = Array.from(new Set(activeRows.map(r=>r.l.owner)));
     const ownerCounts = ownerKeys.map(o=> activeRows.filter(r=>r.l.owner===o).length);
-    const ownerRevenues = ownerKeys.map(o=> rows.filter(r=>r.l.owner===o).reduce((s,r)=>s+(r.l.expectedRevenue||0),0));
+    const ownerRevenues = ownerKeys.map(o=> revenueRows.filter(r=>r.l.owner===o).reduce((s,r)=>s+(r.monthRevenue||0),0));
     renderVBarChart('summaryOwnerCountChart', ownerKeys.map((o,i)=>({label:ownerLabel(o), value:ownerCounts[i], display:ownerCounts[i]+'件'})), '--chart-amber');
     renderVBarChart('summaryOwnerRevenueChart', ownerKeys.map((o,i)=>({label:ownerLabel(o), value:ownerRevenues[i], display:formatYen(ownerRevenues[i])||'¥0'})), '--chart-teal');
 
-    // 業種ごと（構成比なのでドーナツ。業種は最大15種類の固定リストなので全件そのまま表示）
-    const industryKeys = Array.from(new Set(companies.map(c=>c.industry)));
-    let industryItems = industryKeys.map(ind=>({label:ind, value:companies.filter(c=>c.industry===ind).length}))
+    // 業種ごと（件数ベース。構成比なのでドーナツ。業種は最大15種類の固定リストなので全件そのまま表示）
+    const industryKeys = Array.from(new Set(countRows.map(r=>r.c.industry)));
+    let industryItems = industryKeys.map(ind=>({label:ind, value:countRows.filter(r=>r.c.industry===ind).length}))
       .sort((a,b)=>b.value-a.value);
     renderDonutChart('summaryIndustryChart', industryItems);
 
-    // 月次売上見込（稼働開始予定〜稼働終了予定を営業日で日割り）
+    // 月次売上見込（稼働開始予定〜稼働終了予定を営業日で日割り・全期間・グローバルなモード切替の対象外）
     const monthlyForecast = {};
-    rows.forEach(r=>{
+    latestRows.forEach(r=>{
       if(r.l.workStart && r.l.workEnd && r.l.expectedRevenue!=null){
         const m = prorateRevenueByMonth(r.l.workStart, r.l.workEnd, r.l.expectedRevenue);
         Object.keys(m).forEach(k=>{ monthlyForecast[k] = (monthlyForecast[k]||0) + m[k]; });
@@ -1027,6 +1061,18 @@
       renderSummary();
     });
   });
+  document.querySelectorAll('#summaryModeTabs .mini-tab').forEach(t=>{
+    t.addEventListener('click', ()=>{
+      document.querySelectorAll('#summaryModeTabs .mini-tab').forEach(x=>x.classList.remove('active'));
+      t.classList.add('active');
+      summaryViewMode = t.dataset.mode;
+      document.getElementById('summaryMonthNav').style.display = summaryViewMode==='monthly' ? 'flex' : 'none';
+      document.getElementById('summaryMonthNote').style.display = summaryViewMode==='monthly' ? '' : 'none';
+      renderSummary();
+    });
+  });
+  document.getElementById('summaryMonthPrev').addEventListener('click', ()=>{ summaryMonthDate.setMonth(summaryMonthDate.getMonth()-1); renderSummary(); });
+  document.getElementById('summaryMonthNext').addEventListener('click', ()=>{ summaryMonthDate.setMonth(summaryMonthDate.getMonth()+1); renderSummary(); });
 
   // ---- board ----
   function renderBoard(){
