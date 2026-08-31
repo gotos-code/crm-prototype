@@ -370,7 +370,7 @@
         <div class="field"><label>ネクストアクション</label><select id="f_nextaction"></select></div>
         <div class="field"><label>ネクストアクション日</label><input type="date" id="f_nextdate"></div>
       </div>
-      <div id="nextActionSkipNote" class="field" style="display:none;color:var(--ink-soft);font-size:13px;">受注・失注のため、ネクストアクションは不要です。</div>
+      <div id="nextActionSkipNote" class="field" style="display:none;color:var(--ink-soft);font-size:13px;">受注・失注・稼働終了のため、ネクストアクションは不要です。</div>
 
       <div class="subhead">先方担当者・稼働見込</div>
       <div class="grid2">
@@ -467,6 +467,7 @@
 
   const STAGES = [
     { stage:'未着手', confidence:'未着手', rate:0 },
+    { stage:'稼働終了', confidence:'稼働終了', rate:0 },
     { stage:'失注', confidence:'0%', rate:0 },
     { stage:'商談設定/アポイント設定', confidence:'20%', rate:20 },
     { stage:'提案実施/提案内容作成、先方へ提案実施', confidence:'40%', rate:40 },
@@ -477,7 +478,7 @@
   ];
   function stageInfo(label){ return STAGES.find(s=>s.stage===label) || {stage:label||'—',confidence:'—',rate:0}; }
   const OTHER_STAGE = 'その他';
-  function isClosedStage(stage, confidence){ return stage==='失注' || confidence==='100%'; }
+  function isClosedStage(stage, confidence){ return stage==='失注' || stage==='稼働終了' || confidence==='100%'; }
   function parseRate(confidence){ const n = parseInt(confidence); return isNaN(n) ? 0 : n; }
   function calcRevenue(hours){ const h = parseFloat(hours); return isNaN(h) ? null : 130000 + 4300*h; }
   function formatYen(n){ return n==null ? '' : '¥'+Math.round(n).toLocaleString('ja-JP'); }
@@ -913,7 +914,7 @@
           return '<div class="kcard" data-id="'+c.id+'">'+
             '<div class="cname">'+c.name+'</div><div class="cind">'+c.industry+'</div>'+
             '<div class="bar"><i style="width:'+l.progress+'%"></i></div>'+
-            '<div class="na">▸ '+(l.nextAction||'不要（受注・失注）')+'</div>'+
+            '<div class="na">▸ '+(l.nextAction||'不要（受注・失注・稼働終了）')+'</div>'+
             '<div class="meta-row"><span class="owner">'+ownerLabel(l.owner)+'</span>'+statusPill(l.nextDate)+'</div>'+
             '</div>';
         }).join('') + (items.length===0?'<div class="empty" style="padding:12px;">なし</div>':'') +
@@ -999,7 +1000,7 @@
       return '<div class="log-entry"><div class="meta"><span>'+(l.date||'-')+'　担当: '+ownerLabel(l.owner)+'</span><span>確度 '+l.confidence+'</span></div>'+
         '<div><strong>進捗内容：</strong>'+ l.stage +'</div>'+
         (l.detail? '<div><strong>進捗詳細：</strong>'+l.detail+'</div>':'')+
-        (l.nextAction? '<div><strong>ネクストアクション：</strong>'+l.nextAction+'（'+l.nextDate+'）</div>':'<div><strong>ネクストアクション：</strong>不要（受注・失注）</div>')+
+        (l.nextAction? '<div><strong>ネクストアクション：</strong>'+l.nextAction+'（'+l.nextDate+'）</div>':'<div><strong>ネクストアクション：</strong>不要（受注・失注・稼働終了）</div>')+
         '<div><strong>先方担当者：</strong>'+(l.contactName||'—')+'（'+(l.contactInfo||'—')+'）</div>'+
         '<div><strong>稼働見込：</strong>'+(l.expectedHours!=null?l.expectedHours+'時間':'—')+'　<strong>売上見込：</strong>'+(l.expectedRevenue!=null?formatYen(l.expectedRevenue):'—')+'</div>'+
         '<div style="margin-top:8px;"><button class="btn btn-sm log-edit-btn" data-id="'+l.id+'" type="button">編集</button> '+

@@ -383,7 +383,7 @@
           <input type="number" id="f_hours" min="0" step="0.5">
           <div style="font-size:11.5px;color:var(--ink-soft);margin-top:4px;">※ 確定次第入力してください（時間数で記載）</div>
         </div>
-        <div class="field"><label>売上見込</label><input type="text" id="f_revenue" readonly disabled></div>
+        <div class="field"><label>売上見込</label><input type="number" id="f_revenue" min="0" step="1000"></div>
       </div>
       <div style="display:flex;gap:8px;">
         <button class="btn btn-primary" id="saveLog" style="flex:1;">この内容で記録する</button>
@@ -479,7 +479,6 @@
   const OTHER_STAGE = 'その他';
   function isClosedStage(stage, confidence){ return stage==='失注' || confidence==='100%'; }
   function parseRate(confidence){ const n = parseInt(confidence); return isNaN(n) ? 0 : n; }
-  function calcRevenue(hours){ const h = parseFloat(hours); return isNaN(h) ? null : 130000 + 4300*h; }
   function formatYen(n){ return n==null ? '' : '¥'+Math.round(n).toLocaleString('ja-JP'); }
 
   async function loadCompanies(){
@@ -960,9 +959,6 @@
     updateNextActionVisibility();
   });
   document.getElementById('f_confidence').addEventListener('input', updateNextActionVisibility);
-  document.getElementById('f_hours').addEventListener('input', ()=>{
-    document.getElementById('f_revenue').value = formatYen(calcRevenue(document.getElementById('f_hours').value));
-  });
 
   function resetLogForm(){
     editingLogId = null;
@@ -970,7 +966,9 @@
     document.getElementById('saveLog').textContent = 'この内容で記録する';
     document.getElementById('cancelEditLog').style.display = 'none';
     document.getElementById('f_date').value = todayStr();
-    document.getElementById('f_owner').innerHTML = ownerOptionsHtml(currentUser);
+    const activeCompany = companies.find(x=>x.id===activeCompanyId);
+    const lastLog = activeCompany && activeCompany.logs.length ? activeCompany.logs[activeCompany.logs.length-1] : null;
+    document.getElementById('f_owner').innerHTML = ownerOptionsHtml((lastLog && lastLog.owner) || currentUser);
     document.getElementById('f_stage').value = '';
     const confInput = document.getElementById('f_confidence');
     confInput.value = ''; confInput.readOnly = true; confInput.disabled = true; confInput.placeholder = '';
@@ -1029,7 +1027,7 @@
         document.getElementById('f_contactname').value = log.contactName||'';
         document.getElementById('f_contactinfo').value = log.contactInfo||'';
         document.getElementById('f_hours').value = log.expectedHours!=null?log.expectedHours:'';
-        document.getElementById('f_revenue').value = log.expectedRevenue!=null?formatYen(log.expectedRevenue):'';
+        document.getElementById('f_revenue').value = log.expectedRevenue!=null?log.expectedRevenue:'';
         updateNextActionVisibility();
       });
     });
@@ -1086,6 +1084,7 @@
     const contactName = document.getElementById('f_contactname').value.trim();
     const contactInfo = document.getElementById('f_contactinfo').value.trim();
     const hoursRaw = document.getElementById('f_hours').value;
+    const revenueRaw = document.getElementById('f_revenue').value;
     if(!stage){ alert('進捗内容を選択してください'); return; }
     if(stage===OTHER_STAGE && !confidence){ alert('確度を入力してください'); return; }
     if(!contactName || !contactInfo){ alert('担当者の名前と連絡先は必須です'); return; }
@@ -1098,7 +1097,7 @@
     }
     const rate = stage===OTHER_STAGE ? parseRate(confidence) : stageInfo(stage).rate;
     const expectedHours = hoursRaw==='' ? null : parseFloat(hoursRaw);
-    const expectedRevenue = calcRevenue(hoursRaw);
+    const expectedRevenue = revenueRaw==='' ? null : parseFloat(revenueRaw);
     const saveBtn = document.getElementById('saveLog');
     saveBtn.disabled = true;
     const payload = {
