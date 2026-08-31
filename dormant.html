@@ -267,6 +267,13 @@
             <div id="summaryIndustryChart"></div>
           </div>
         </div>
+        <div class="panel">
+          <div class="panel-body">
+            <div class="summary-panel-title">月次売上見込（稼働開始予定〜稼働終了予定を営業日で日割り）</div>
+            <div id="summaryForecastChart"></div>
+            <div id="summaryForecastTotal" style="margin-top:10px;font-size:13px;font-weight:700;color:var(--ink-soft);"></div>
+          </div>
+        </div>
       </div>
 
       <!-- LIST VIEW -->
@@ -385,6 +392,10 @@
         </div>
         <div class="field"><label>売上見込</label><input type="number" id="f_revenue" min="0" step="1000"></div>
       </div>
+      <div class="grid2">
+        <div class="field"><label>稼働開始予定（任意）</label><input type="date" id="f_workstart"></div>
+        <div class="field"><label>稼働終了予定（任意）</label><input type="date" id="f_workend"></div>
+      </div>
       <div style="display:flex;gap:8px;">
         <button class="btn btn-primary" id="saveLog" style="flex:1;">この内容で記録する</button>
         <button class="btn" id="cancelEditLog" type="button" style="display:none;">編集をキャンセル</button>
@@ -484,7 +495,7 @@
   async function loadCompanies(){
     const { data, error } = await window.__SUPA
       .from('companies')
-      .select('id,name,industry,company_logs(id,log_date,owner_email,progress,stage,confidence_label,progress_text,next_action,next_date,contact_name,contact_info,expected_hours,expected_revenue,created_at)')
+      .select('id,name,industry,company_logs(id,log_date,owner_email,progress,stage,confidence_label,progress_text,next_action,next_date,contact_name,contact_info,expected_hours,expected_revenue,work_start_date,work_end_date,created_at)')
       .eq('category', CRM_CATEGORY)
       .order('id');
     if(error){ alert('データの読み込みに失敗しました：'+error.message); return []; }
@@ -494,6 +505,7 @@
         id: l.id, date: l.log_date, owner: l.owner_email, progress: l.progress,
         contactName: l.contact_name, contactInfo: l.contact_info,
         expectedHours: l.expected_hours, expectedRevenue: l.expected_revenue,
+        workStart: l.work_start_date, workEnd: l.work_end_date,
         stage: l.stage || '（未設定）',
         confidence: l.confidence_label || (l.stage ? stageInfo(l.stage).confidence : (l.progress!=null ? l.progress+'%' : '—')),
         detail: l.progress_text, nextAction: l.next_action, nextDate: l.next_date
@@ -850,6 +862,35 @@
     document.getElementById(containerId).innerHTML = total<=1 && items.every(i=>i.value===0) ? '<div class="empty">データがありません</div>' :
       '<div class="donut-wrap"><div class="donut" style="background:conic-gradient('+stops+')"><div class="donut-hole"></div></div><div class="donut-legend">'+legend+'</div></div>';
   }
+  function businessDaysBetween(start, end){
+    let count = 0;
+    const cur = new Date(start);
+    while(cur <= end){
+      const dow = cur.getDay();
+      if(dow!==0 && dow!==6) count++;
+      cur.setDate(cur.getDate()+1);
+    }
+    return count;
+  }
+  function prorateRevenueByMonth(startStr, endStr, total){
+    const start = new Date(startStr+'T00:00:00');
+    const end = new Date(endStr+'T00:00:00');
+    if(end < start || total==null) return {};
+    const totalDays = businessDaysBetween(start, end);
+    if(totalDays===0) return {};
+    const perDay = total/totalDays;
+    const result = {};
+    let cur = new Date(start);
+    while(cur <= end){
+      const y = cur.getFullYear(), m = cur.getMonth();
+      const monthKey = y+'-'+String(m+1).padStart(2,'0');
+      const monthEnd = new Date(y, m+1, 0);
+      const sliceEnd = monthEnd < end ? monthEnd : end;
+      result[monthKey] = (result[monthKey]||0) + perDay*businessDaysBetween(cur, sliceEnd);
+      cur = new Date(y, m+1, 1);
+    }
+    return result;
+  }
   function renderSummary(){
     const rows = companies.map(c=>({c, l: latestLog(c)}));
     const chartStages = [STAGES[0], STAGES[2], STAGES[3], STAGES[4], STAGES[5], STAGES[6], STAGES[7], STAGES[1], {stage:OTHER_STAGE, confidence:'—'}];
@@ -896,6 +937,21 @@
     let industryItems = industryKeys.map(ind=>({label:ind, value:companies.filter(c=>c.industry===ind).length}))
       .sort((a,b)=>b.value-a.value);
     renderDonutChart('summaryIndustryChart', industryItems);
+
+    // 月次売上見込（稼働開始予定〜稼働終了予定を営業日で日割り）
+    const monthlyForecast = {};
+    rows.forEach(r=>{
+      if(r.l.workStart && r.l.workEnd && r.l.expectedRevenue!=null){
+        const m = prorateRevenueByMonth(r.l.workStart, r.l.workEnd, r.l.expectedRevenue);
+        Object.keys(m).forEach(k=>{ monthlyForecast[k] = (monthlyForecast[k]||0) + m[k]; });
+      }
+    });
+    const forecastMonths = Object.keys(monthlyForecast).sort();
+    const forecastTotal = forecastMonths.reduce((s,k)=>s+monthlyForecast[k],0);
+    renderVBarChart('summaryForecastChart', forecastMonths.map(k=>({
+      label: k.slice(0,4)+'年'+parseInt(k.slice(5,7))+'月', value: monthlyForecast[k], display: formatYen(monthlyForecast[k])||'¥0'
+    })), '--chart-coral');
+    document.getElementById('summaryForecastTotal').textContent = 'トータル：'+(forecastMonths.length>0?formatYen(forecastTotal):'¥0');
   }
 
   // ---- board ----
@@ -979,6 +1035,8 @@
     document.getElementById('f_contactinfo').value = (lastLog && lastLog.contactInfo) || '';
     document.getElementById('f_hours').value='';
     document.getElementById('f_revenue').value='';
+    document.getElementById('f_workstart').value='';
+    document.getElementById('f_workend').value='';
     updateNextActionVisibility();
   }
   function openDrawer(id){
@@ -1000,6 +1058,7 @@
         (l.nextAction? '<div><strong>ネクストアクション：</strong>'+l.nextAction+'（'+l.nextDate+'）</div>':'<div><strong>ネクストアクション：</strong>不要（受注・失注）</div>')+
         '<div><strong>先方担当者：</strong>'+(l.contactName||'—')+'（'+(l.contactInfo||'—')+'）</div>'+
         '<div><strong>稼働見込：</strong>'+(l.expectedHours!=null?l.expectedHours+'時間':'—')+'　<strong>売上見込：</strong>'+(l.expectedRevenue!=null?formatYen(l.expectedRevenue):'—')+'</div>'+
+        (l.workStart||l.workEnd? '<div><strong>稼働期間：</strong>'+(l.workStart||'未定')+' ～ '+(l.workEnd||'未定')+'</div>':'')+
         '<div style="margin-top:8px;"><button class="btn btn-sm log-edit-btn" data-id="'+l.id+'" type="button">編集</button> '+
         '<button class="btn btn-sm log-delete-btn" data-id="'+l.id+'" type="button" style="color:var(--danger);border-color:var(--danger);">削除</button></div>'+
         '</div>';
@@ -1028,6 +1087,8 @@
         document.getElementById('f_contactinfo').value = log.contactInfo||'';
         document.getElementById('f_hours').value = log.expectedHours!=null?log.expectedHours:'';
         document.getElementById('f_revenue').value = log.expectedRevenue!=null?log.expectedRevenue:'';
+        document.getElementById('f_workstart').value = log.workStart||'';
+        document.getElementById('f_workend').value = log.workEnd||'';
         updateNextActionVisibility();
       });
     });
@@ -1085,9 +1146,12 @@
     const contactInfo = document.getElementById('f_contactinfo').value.trim();
     const hoursRaw = document.getElementById('f_hours').value;
     const revenueRaw = document.getElementById('f_revenue').value;
+    const workStart = document.getElementById('f_workstart').value || null;
+    const workEnd = document.getElementById('f_workend').value || null;
     if(!stage){ alert('進捗内容を選択してください'); return; }
     if(stage===OTHER_STAGE && !confidence){ alert('確度を入力してください'); return; }
     if(!contactName || !contactInfo){ alert('担当者の名前と連絡先は必須です'); return; }
+    if(workStart && workEnd && workEnd < workStart){ alert('稼働終了予定は稼働開始予定より後の日付にしてください'); return; }
     const closed = isClosedStage(stage, confidence);
     let nextAction = null, nextDate = null;
     if(!closed){
@@ -1105,20 +1169,21 @@
       stage, confidence_label: confidence, progress: rate,
       progress_text: detail, next_action: nextAction, next_date: nextDate,
       contact_name: contactName, contact_info: contactInfo,
-      expected_hours: expectedHours, expected_revenue: expectedRevenue
+      expected_hours: expectedHours, expected_revenue: expectedRevenue,
+      work_start_date: workStart, work_end_date: workEnd
     };
     if(editingLogId){
       const { error } = await window.__SUPA.from('company_logs').update(payload).eq('id', editingLogId);
       saveBtn.disabled = false;
       if(error){ alert('更新に失敗しました：'+error.message); return; }
       const idx = c.logs.findIndex(x=>x.id===editingLogId);
-      if(idx>=0) c.logs[idx] = {id:editingLogId, date, owner, progress:rate, stage, confidence, detail, nextAction, nextDate, contactName, contactInfo, expectedHours, expectedRevenue};
+      if(idx>=0) c.logs[idx] = {id:editingLogId, date, owner, progress:rate, stage, confidence, detail, nextAction, nextDate, contactName, contactInfo, expectedHours, expectedRevenue, workStart, workEnd};
     } else {
       const { data, error } = await window.__SUPA.from('company_logs').insert({ company_id: c.id, ...payload }).select().single();
       saveBtn.disabled = false;
       if(error){ alert('保存に失敗しました：'+error.message); return; }
       c.logs.push({id:data.id, date, owner, progress:rate, stage, confidence, detail, nextAction, nextDate,
-        contactName, contactInfo, expectedHours, expectedRevenue});
+        contactName, contactInfo, expectedHours, expectedRevenue, workStart, workEnd});
     }
     renderHistory(c);
     resetLogForm();
@@ -1233,11 +1298,11 @@
   }
   document.getElementById('exportBtn').addEventListener('click', ()=>{
     const rows = adminRows();
-    const header = ['会社名','業種','担当者','アプローチ日','進捗内容','確度','進捗詳細','ネクストアクション','ネクストアクション日','担当者の名前','担当者の連絡先','稼働見込（時間）','売上見込'];
+    const header = ['会社名','業種','担当者','アプローチ日','進捗内容','確度','進捗詳細','ネクストアクション','ネクストアクション日','担当者の名前','担当者の連絡先','稼働見込（時間）','売上見込','稼働開始予定','稼働終了予定'];
     const csvRows = [header.join(',')];
     rows.forEach(r=>{
       const vals = [r.c.name, r.c.industry, r.l.owner, r.l.date, r.l.stage, r.l.confidence, r.l.detail, r.l.nextAction, r.l.nextDate,
-        r.l.contactName, r.l.contactInfo, r.l.expectedHours, r.l.expectedRevenue]
+        r.l.contactName, r.l.contactInfo, r.l.expectedHours, r.l.expectedRevenue, r.l.workStart, r.l.workEnd]
         .map(v=> '"'+String(v==null?'':v).replace(/"/g,'""')+'"');
       csvRows.push(vals.join(','));
     });
