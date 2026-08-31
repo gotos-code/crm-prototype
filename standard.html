@@ -149,6 +149,9 @@
   .tabs{display:flex;gap:4px;border-bottom:1px solid var(--border);margin-bottom:18px;}
   .tab{padding:9px 16px;cursor:pointer;font-size:13px;font-weight:600;color:var(--ink-soft);border-bottom:2px solid transparent;}
   .tab.active{color:var(--primary);border-bottom-color:var(--primary);}
+  .mini-tabs{display:inline-flex;gap:2px;border:1px solid var(--border);border-radius:100px;padding:3px;margin-bottom:12px;}
+  .mini-tab{padding:5px 14px;cursor:pointer;font-size:12.5px;font-weight:600;color:var(--ink-soft);border-radius:100px;}
+  .mini-tab.active{background:var(--primary);color:var(--primary-ink);}
   .view{display:none;}
   .view.active{display:block;}
   .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;}
@@ -270,7 +273,15 @@
         <div class="panel">
           <div class="panel-body">
             <div class="summary-panel-title">月次売上見込（稼働開始予定〜稼働終了予定を営業日で日割り）</div>
+            <div class="mini-tabs" id="forecastTabs">
+              <div class="mini-tab active" data-mode="monthly">月次</div>
+              <div class="mini-tab" data-mode="total">トータル</div>
+            </div>
             <div id="summaryForecastChart"></div>
+            <div id="summaryForecastTotalBlock" style="display:none;text-align:center;padding:20px 0;">
+              <div style="font-size:12.5px;color:var(--ink-soft);margin-bottom:6px;">対象期間トータル</div>
+              <div style="font-size:30px;font-weight:800;" id="summaryForecastTotalBig"></div>
+            </div>
             <div id="summaryForecastTotal" style="margin-top:10px;font-size:13px;font-weight:700;color:var(--ink-soft);"></div>
           </div>
         </div>
@@ -520,6 +531,7 @@
   let activeCompanyId = null;
   let editingLogId = null;
   let calDate = new Date();
+  let forecastViewMode = 'monthly';
 
   function latestLog(c){ return c.logs[c.logs.length-1]; }
   function daysDiff(dateStr){
@@ -999,11 +1011,24 @@
     });
     const forecastMonths = Object.keys(monthlyForecast).sort();
     const forecastTotal = forecastMonths.reduce((s,k)=>s+monthlyForecast[k],0);
+    const forecastDisplayTotal = forecastMonths.length>0 ? formatYen(forecastTotal) : '¥0';
+    document.getElementById('summaryForecastChart').style.display = forecastViewMode==='monthly' ? '' : 'none';
+    document.getElementById('summaryForecastTotalBlock').style.display = forecastViewMode==='total' ? '' : 'none';
+    document.getElementById('summaryForecastTotal').style.display = forecastViewMode==='monthly' ? '' : 'none';
     renderVBarChart('summaryForecastChart', forecastMonths.map(k=>({
       label: k.slice(0,4)+'年'+parseInt(k.slice(5,7))+'月', value: monthlyForecast[k], display: formatYen(monthlyForecast[k])||'¥0'
     })), '--chart-coral');
-    document.getElementById('summaryForecastTotal').textContent = 'トータル：'+(forecastMonths.length>0?formatYen(forecastTotal):'¥0');
+    document.getElementById('summaryForecastTotal').textContent = 'トータル：'+forecastDisplayTotal;
+    document.getElementById('summaryForecastTotalBig').textContent = forecastDisplayTotal;
   }
+  document.querySelectorAll('#forecastTabs .mini-tab').forEach(t=>{
+    t.addEventListener('click', ()=>{
+      document.querySelectorAll('#forecastTabs .mini-tab').forEach(x=>x.classList.remove('active'));
+      t.classList.add('active');
+      forecastViewMode = t.dataset.mode;
+      renderSummary();
+    });
+  });
 
   // ---- board ----
   function renderBoard(){
