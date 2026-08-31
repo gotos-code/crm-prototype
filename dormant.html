@@ -862,12 +862,61 @@
     document.getElementById(containerId).innerHTML = total<=1 && items.every(i=>i.value===0) ? '<div class="empty">データがありません</div>' :
       '<div class="donut-wrap"><div class="donut" style="background:conic-gradient('+stops+')"><div class="donut-hole"></div></div><div class="donut-legend">'+legend+'</div></div>';
   }
+  // ---- 日本の祝日（固定日・月曜日・春分/秋分の日・振替休日・国民の休日） ----
+  function nthMondayOfMonth(year, monthIdx, n){
+    const first = new Date(year, monthIdx, 1);
+    const offset = (1 - first.getDay() + 7) % 7;
+    return new Date(year, monthIdx, 1 + offset + (n-1)*7);
+  }
+  function equinoxDate(year, isSpring){
+    const base = isSpring ? 20.8431 : 23.2488;
+    const day = Math.floor(base + 0.242194*(year-1980) - Math.floor((year-1980)/4));
+    return new Date(year, isSpring?2:8, day);
+  }
+  function japaneseHolidayDates(year){
+    return [
+      new Date(year,0,1), nthMondayOfMonth(year,0,2), new Date(year,1,11), new Date(year,1,23),
+      equinoxDate(year,true), new Date(year,3,29), new Date(year,4,3), new Date(year,4,4), new Date(year,4,5),
+      nthMondayOfMonth(year,6,3), new Date(year,7,11), nthMondayOfMonth(year,8,3), equinoxDate(year,false),
+      nthMondayOfMonth(year,9,2), new Date(year,10,3), new Date(year,10,23)
+    ];
+  }
+  function dateKey(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+  const holidayCache = {};
+  function holidaySetForYear(year){
+    if(holidayCache[year]) return holidayCache[year];
+    const holidays = japaneseHolidayDates(year);
+    const set = new Set(holidays.map(dateKey));
+    holidays.forEach(d=>{
+      if(d.getDay()===0){
+        const sub = new Date(d);
+        do { sub.setDate(sub.getDate()+1); } while(set.has(dateKey(sub)));
+        set.add(dateKey(sub));
+      }
+    });
+    const daysInYear = (new Date(year,11,31) - new Date(year,0,1)) / 86400000 + 1;
+    const cursor = new Date(year,0,1);
+    for(let i=0;i<daysInYear;i++){
+      if(cursor.getDay()!==0){
+        const key = dateKey(cursor);
+        if(!set.has(key)){
+          const prev = new Date(cursor); prev.setDate(prev.getDate()-1);
+          const next = new Date(cursor); next.setDate(next.getDate()+1);
+          if(set.has(dateKey(prev)) && set.has(dateKey(next))) set.add(key);
+        }
+      }
+      cursor.setDate(cursor.getDate()+1);
+    }
+    holidayCache[year] = set;
+    return set;
+  }
+  function isJapaneseHoliday(date){ return holidaySetForYear(date.getFullYear()).has(dateKey(date)); }
   function businessDaysBetween(start, end){
     let count = 0;
     const cur = new Date(start);
     while(cur <= end){
       const dow = cur.getDay();
-      if(dow!==0 && dow!==6) count++;
+      if(dow!==0 && dow!==6 && !isJapaneseHoliday(cur)) count++;
       cur.setDate(cur.getDate()+1);
     }
     return count;
