@@ -1154,10 +1154,10 @@
     const lastLog = activeCompany && activeCompany.logs.length ? activeCompany.logs[activeCompany.logs.length-1] : null;
     document.getElementById('f_contactname').value = (lastLog && lastLog.contactName) || '';
     document.getElementById('f_contactinfo').value = (lastLog && lastLog.contactInfo) || '';
-    document.getElementById('f_hours').value='';
-    document.getElementById('f_revenue').value='';
-    document.getElementById('f_workstart').value='';
-    document.getElementById('f_workend').value='';
+    document.getElementById('f_hours').value = (lastLog && lastLog.expectedHours!=null) ? lastLog.expectedHours : '';
+    document.getElementById('f_revenue').value = (lastLog && lastLog.expectedRevenue!=null) ? lastLog.expectedRevenue : '';
+    document.getElementById('f_workstart').value = (lastLog && lastLog.workStart) || '';
+    document.getElementById('f_workend').value = (lastLog && lastLog.workEnd) || '';
     updateNextActionVisibility();
   }
   function openDrawer(id){

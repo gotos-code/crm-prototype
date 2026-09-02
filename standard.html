@@ -411,7 +411,7 @@
           <input type="number" id="f_hours" min="0" step="0.5">
           <div style="font-size:11.5px;color:var(--ink-soft);margin-top:4px;">※ 確定次第入力してください（時間数で記載）</div>
         </div>
-        <div class="field"><label>売上見込</label><input type="text" id="f_revenue" readonly disabled></div>
+        <div class="field"><label>売上見込</label><input type="number" id="f_revenue" min="0" step="1000"></div>
       </div>
       <div class="grid2">
         <div class="field"><label>稼働開始予定（任意）</label><input type="date" id="f_workstart"></div>
@@ -506,7 +506,6 @@
   const OTHER_STAGE = 'その他';
   function isClosedStage(stage, confidence){ return stage==='稼働終了' || stage==='失注' || confidence==='100%'; }
   function parseRate(confidence){ const n = parseInt(confidence); return isNaN(n) ? 0 : n; }
-  function calcRevenue(hours){ const h = parseFloat(hours); return isNaN(h) ? null : 130000 + 4300*h; }
   function formatYen(n){ return n==null ? '' : '¥'+Math.round(n).toLocaleString('ja-JP'); }
 
   async function loadCompanies(){
@@ -1127,9 +1126,6 @@
     updateNextActionVisibility();
   });
   document.getElementById('f_confidence').addEventListener('input', updateNextActionVisibility);
-  document.getElementById('f_hours').addEventListener('input', ()=>{
-    document.getElementById('f_revenue').value = formatYen(calcRevenue(document.getElementById('f_hours').value));
-  });
 
   function resetLogForm(){
     editingLogId = null;
@@ -1146,10 +1142,12 @@
     document.getElementById('f_nextdate').value='';
     document.getElementById('f_contactname').value='';
     document.getElementById('f_contactinfo').value='';
-    document.getElementById('f_hours').value='';
-    document.getElementById('f_revenue').value='';
-    document.getElementById('f_workstart').value='';
-    document.getElementById('f_workend').value='';
+    const activeCompany = companies.find(x=>x.id===activeCompanyId);
+    const lastLog = activeCompany && activeCompany.logs.length ? activeCompany.logs[activeCompany.logs.length-1] : null;
+    document.getElementById('f_hours').value = (lastLog && lastLog.expectedHours!=null) ? lastLog.expectedHours : '';
+    document.getElementById('f_revenue').value = (lastLog && lastLog.expectedRevenue!=null) ? lastLog.expectedRevenue : '';
+    document.getElementById('f_workstart').value = (lastLog && lastLog.workStart) || '';
+    document.getElementById('f_workend').value = (lastLog && lastLog.workEnd) || '';
     updateNextActionVisibility();
   }
   function openDrawer(id){
@@ -1199,7 +1197,7 @@
         document.getElementById('f_contactname').value = log.contactName||'';
         document.getElementById('f_contactinfo').value = log.contactInfo||'';
         document.getElementById('f_hours').value = log.expectedHours!=null?log.expectedHours:'';
-        document.getElementById('f_revenue').value = log.expectedRevenue!=null?formatYen(log.expectedRevenue):'';
+        document.getElementById('f_revenue').value = log.expectedRevenue!=null?log.expectedRevenue:'';
         document.getElementById('f_workstart').value = log.workStart||'';
         document.getElementById('f_workend').value = log.workEnd||'';
         updateNextActionVisibility();
@@ -1258,6 +1256,7 @@
     const contactName = document.getElementById('f_contactname').value.trim();
     const contactInfo = document.getElementById('f_contactinfo').value.trim();
     const hoursRaw = document.getElementById('f_hours').value;
+    const revenueRaw = document.getElementById('f_revenue').value;
     const workStart = document.getElementById('f_workstart').value || null;
     const workEnd = document.getElementById('f_workend').value || null;
     if(!stage){ alert('進捗内容を選択してください'); return; }
@@ -1273,7 +1272,7 @@
     }
     const rate = stage===OTHER_STAGE ? parseRate(confidence) : stageInfo(stage).rate;
     const expectedHours = hoursRaw==='' ? null : parseFloat(hoursRaw);
-    const expectedRevenue = calcRevenue(hoursRaw);
+    const expectedRevenue = revenueRaw==='' ? null : parseFloat(revenueRaw);
     const saveBtn = document.getElementById('saveLog');
     saveBtn.disabled = true;
     const payload = {
