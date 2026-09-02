@@ -168,6 +168,8 @@
   .empty{color:var(--ink-soft);font-size:13px;padding:20px 0;text-align:center;}
   .kanban{display:flex;gap:10px;overflow-x:auto;padding-bottom:10px;align-items:flex-start;}
   .kcol{flex:0 0 148px;width:148px;}
+  #calHalfBoard.kanban{gap:14px;}
+  #calHalfBoard .kcol{flex:0 0 190px;width:190px;}
   .kcol-head{font-weight:700;font-size:11.5px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;color:var(--ink-soft);gap:4px;}
   .kcol-head .n{background:var(--surface-2);border-radius:100px;padding:1px 7px;font-size:10.5px;font-variant-numeric:tabular-nums;flex:none;}
   .kcard{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:9px 10px;margin-bottom:8px;cursor:pointer;}
@@ -337,19 +339,13 @@
       <div class="view" id="view-calendar">
         <div class="panel">
           <div class="panel-body">
-            <div class="cal-nav">
-              <button class="btn btn-sm" id="calPrev">← 前月</button>
-              <h3 id="calLabel"></h3>
-              <button class="btn btn-sm" id="calNext">翌月 →</button>
-              <button class="btn btn-sm" id="calToday">今月</button>
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+              <label style="font-size:13px;font-weight:700;color:var(--ink-soft);">表示する期</label>
+              <select id="calPeriodSelect"></select>
             </div>
-            <div class="cal-grid" id="calGrid"></div>
           </div>
         </div>
-        <div class="panel" id="dayDetailPanel" style="display:none;">
-          <div class="panel-head"><h2 id="dayDetailTitle"></h2></div>
-          <div class="panel-body" id="dayDetailBody"></div>
-        </div>
+        <div class="kanban" id="calHalfBoard"></div>
       </div>
 
       <!-- ADMIN VIEW -->
@@ -402,7 +398,7 @@
         <div class="field"><label>ネクストアクション</label><select id="f_nextaction"></select></div>
         <div class="field"><label>ネクストアクション日</label><input type="date" id="f_nextdate"></div>
       </div>
-      <div id="nextActionSkipNote" class="field" style="display:none;color:var(--ink-soft);font-size:13px;">受注・失注・稼働終了のため、ネクストアクションは不要です。</div>
+      <div id="nextActionSkipNote" class="field" style="display:none;color:var(--ink-soft);font-size:13px;">稼働終了のため、ネクストアクションは不要です。</div>
 
       <div class="subhead">先方担当者・稼働見込</div>
       <div class="grid2">
@@ -502,19 +498,13 @@
   const CRM_CATEGORY = 'existing'; // 既存顧客・休眠顧客でデータを分離するためのタグ
 
   const STAGES = [
-    { stage:'未着手', confidence:'未着手', rate:0 },
-    { stage:'稼働終了', confidence:'稼働終了', rate:0 },
-    { stage:'失注', confidence:'0%', rate:0 },
-    { stage:'商談設定/アポイント設定', confidence:'20%', rate:20 },
-    { stage:'提案実施/提案内容作成、先方へ提案実施', confidence:'40%', rate:40 },
-    { stage:'見積/先方と一定の目合わせ済み', confidence:'60%', rate:60 },
-    { stage:'稟議・社内検討/検討段階かを把握、進捗を把握', confidence:'70%', rate:70 },
-    { stage:'最終クロージング/条件等の最終詰め実施', confidence:'90%', rate:90 },
-    { stage:'受注/稼働確定、注文書済み', confidence:'100%', rate:100 },
+    { stage:'未稼働', confidence:'未稼働', rate:0 },
+    { stage:'稼働中', confidence:'稼働中', rate:50 },
+    { stage:'稼働終了', confidence:'稼働終了', rate:100 },
   ];
   function stageInfo(label){ return STAGES.find(s=>s.stage===label) || {stage:label||'—',confidence:'—',rate:0}; }
   const OTHER_STAGE = 'その他';
-  function isClosedStage(stage, confidence){ return stage==='失注' || stage==='稼働終了' || confidence==='100%'; }
+  function isClosedStage(stage, confidence){ return stage==='稼働終了' || stage==='失注' || confidence==='100%'; }
   function parseRate(confidence){ const n = parseInt(confidence); return isNaN(n) ? 0 : n; }
   function calcRevenue(hours){ const h = parseFloat(hours); return isNaN(h) ? null : 130000 + 4300*h; }
   function formatYen(n){ return n==null ? '' : '¥'+Math.round(n).toLocaleString('ja-JP'); }
@@ -544,7 +534,7 @@
   let currentUser = window.__CRM_USER_EMAIL || localStorage.getItem(USER_KEY) || REPS[0];
   let activeCompanyId = null;
   let editingLogId = null;
-  let calDate = new Date();
+  let calHalfBlockIndex = null;
   let forecastViewMode = 'monthly';
   let summaryViewMode = 'total';
   let summaryMonthDate = new Date();
@@ -714,7 +704,7 @@
     const { data: newCompany, error } = await window.__SUPA.from('companies').insert({ name, industry, category: CRM_CATEGORY }).select().single();
     if(!error && newCompany){
       await window.__SUPA.from('company_logs').insert({
-        company_id: newCompany.id, stage: '未着手', confidence_label: '未着手', progress: 0
+        company_id: newCompany.id, stage: '未稼働', confidence_label: '未稼働', progress: 0
       });
     }
     btn.disabled = false; btn.textContent = 'この内容で追加する';
@@ -827,7 +817,7 @@
       if(error || !newCompany){ failed++; continue; }
       const { error: logError } = await window.__SUPA.from('company_logs').insert({
         company_id: newCompany.id,
-        stage: '未着手', confidence_label: '未着手', progress: 0
+        stage: '未稼働', confidence_label: '未稼働', progress: 0
       });
       if(logError){ failed++; } else { success++; }
     }
@@ -990,11 +980,11 @@
       ? companies.map(c=>({c, l: latestLog(c), monthRevenue: monthOverlapRevenue(c, monthKey)})).filter(r=>r.monthRevenue!=null)
       : latestRows.map(r=>({c:r.c, l:r.l, monthRevenue:r.l.expectedRevenue}));
 
-    const chartStages = ['未着手','商談設定/アポイント設定','提案実施/提案内容作成、先方へ提案実施','見積/先方と一定の目合わせ済み','稟議・社内検討/検討段階かを把握、進捗を把握','最終クロージング/条件等の最終詰め実施','受注/稼働確定、注文書済み','失注','稼働終了'].map(stageInfo).concat([{stage:OTHER_STAGE, confidence:'—'}]);
+    const chartStages = ['未稼働','稼働中','稼働終了'].map(stageInfo).concat([{stage:OTHER_STAGE, confidence:'—'}]);
     const revenues = chartStages.map(s=> revenueRows.filter(r=>r.l.stage===s.stage).reduce((sum,r)=> sum + (r.monthRevenue||0), 0));
     const totalCount = countRows.length;
     const totalRevenue = revenueRows.reduce((sum,r)=> sum + (r.monthRevenue||0), 0);
-    const wonCount = countRows.filter(r=>r.l.stage==='受注/稼働確定、注文書済み').length;
+    const wonCount = countRows.filter(r=>r.l.stage==='稼働終了').length;
     const winRate = totalCount>0 ? Math.round(wonCount/totalCount*100) : null;
     const revenueRowsWithValue = summaryViewMode==='monthly' ? revenueRows : revenueRows.filter(r=>r.monthRevenue!=null);
     const avgRevenue = revenueRowsWithValue.length>0 ? revenueRowsWithValue.reduce((s,r)=>s+r.monthRevenue,0)/revenueRowsWithValue.length : null;
@@ -1003,26 +993,26 @@
     document.getElementById('statRow').innerHTML =
       '<div class="stat-tile"><div class="label">'+(monthly?'アプローチ件数（月次）':'パイプライン件数')+'</div><div class="value">'+totalCount+'件</div></div>'+
       '<div class="stat-tile"><div class="label">売上見込合計'+(monthly?'（月次）':'')+'</div><div class="value">'+formatYen(totalRevenue)+'</div></div>'+
-      '<div class="stat-tile"><div class="label">受注件数'+(monthly?'（月次）':'')+'</div><div class="value">'+wonCount+'件</div></div>'+
-      '<div class="stat-tile"><div class="label">受注率（受注÷'+(monthly?'アプローチ件数':'着手数')+'）</div><div class="value">'+(winRate!=null?winRate+'%':'—')+'</div></div>'+
+      '<div class="stat-tile"><div class="label">稼働終了件数'+(monthly?'（月次）':'')+'</div><div class="value">'+wonCount+'件</div></div>'+
+      '<div class="stat-tile"><div class="label">稼働終了率（稼働終了÷'+(monthly?'アプローチ件数':'着手数')+'）</div><div class="value">'+(winRate!=null?winRate+'%':'—')+'</div></div>'+
       '<div class="stat-tile"><div class="label">平均売上見込（件あたり'+(monthly?'・月次':'')+'）</div><div class="value">'+(avgRevenue!=null?formatYen(avgRevenue):'—')+'</div></div>';
 
-    // 確度ごとの件数は未着手を除く（未着手はまだ何も進んでいないため）
-    const countChartStages = chartStages.filter(s=>s.stage!=='未着手');
+    // 確度ごとの件数は未稼働を除く（未稼働はまだ何も進んでいないため）
+    const countChartStages = chartStages.filter(s=>s.stage!=='未稼働');
     const countsExclNotStarted = countChartStages.map(s=> countRows.filter(r=>r.l.stage===s.stage).length);
-    renderVBarChart('summaryCountChart', countChartStages.map((s,i)=>({label:shortStageLabel(s.stage)+'（'+s.confidence+'）', value:countsExclNotStarted[i], display:countsExclNotStarted[i]+'件'})), '--chart-blue');
-    renderVBarChart('summaryRevenueChart', chartStages.map((s,i)=>({label:shortStageLabel(s.stage)+'（'+s.confidence+'）', value:revenues[i], display:formatYen(revenues[i])||'¥0'})), '--chart-green');
+    renderVBarChart('summaryCountChart', countChartStages.map((s,i)=>({label:shortStageLabel(s.stage), value:countsExclNotStarted[i], display:countsExclNotStarted[i]+'件'})), '--chart-blue');
+    renderVBarChart('summaryRevenueChart', chartStages.map((s,i)=>({label:shortStageLabel(s.stage), value:revenues[i], display:formatYen(revenues[i])||'¥0'})), '--chart-green');
 
-    // 月別アプローチ件数トレンド（直近6ヶ月・未着手を除く）
+    // 月別アプローチ件数トレンド（直近6ヶ月・未稼働を除く）
     const now = new Date(todayStr()+'T00:00:00');
     const months = [];
     for(let i=5;i>=0;i--){ const d=new Date(now.getFullYear(), now.getMonth()-i, 1); months.push(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')); }
-    const allLogs = companies.reduce((acc,c)=>acc.concat(c.logs), []).filter(l=>l.stage!=='未着手');
+    const allLogs = companies.reduce((acc,c)=>acc.concat(c.logs), []).filter(l=>l.stage!=='未稼働');
     const trendCounts = months.map(k=> allLogs.filter(l=> (l.date||'').slice(0,7)===k).length);
     renderLineChart('summaryTrendChart', months.map((k,i)=>({label:parseInt(k.slice(5,7))+'月', value:trendCounts[i], display:trendCounts[i]+'件'})), '--chart-purple');
 
-    // 担当者ごと（件数は未着手を除く）
-    const activeRows = countRows.filter(r=>r.l.stage!=='未着手');
+    // 担当者ごと（件数は未稼働を除く）
+    const activeRows = countRows.filter(r=>r.l.stage!=='未稼働');
     const ownerKeys = Array.from(new Set(activeRows.map(r=>r.l.owner)));
     const ownerCounts = ownerKeys.map(o=> activeRows.filter(r=>r.l.owner===o).length);
     const ownerRevenues = ownerKeys.map(o=> revenueRows.filter(r=>r.l.owner===o).reduce((s,r)=>s+(r.monthRevenue||0),0));
@@ -1090,7 +1080,7 @@
           return '<div class="kcard" data-id="'+c.id+'">'+
             '<div class="cname">'+c.name+'</div><div class="cind">'+c.industry+'</div>'+
             '<div class="bar"><i style="width:'+l.progress+'%"></i></div>'+
-            '<div class="na">▸ '+(l.nextAction||'不要（受注・失注・稼働終了）')+'</div>'+
+            '<div class="na">▸ '+(l.nextAction||'不要（稼働終了）')+'</div>'+
             '<div class="meta-row"><span class="owner">'+ownerLabel(l.owner)+'</span>'+statusPill(l.nextDate)+'</div>'+
             '</div>';
         }).join('') + (items.length===0?'<div class="empty" style="padding:12px;">なし</div>':'') +
@@ -1178,7 +1168,7 @@
       return '<div class="log-entry"><div class="meta"><span>'+(l.date||'-')+'　担当: '+ownerLabel(l.owner)+'</span><span>確度 '+l.confidence+'</span></div>'+
         '<div><strong>進捗内容：</strong>'+ l.stage +'</div>'+
         (l.detail? '<div><strong>進捗詳細：</strong>'+l.detail+'</div>':'')+
-        (l.nextAction? '<div><strong>ネクストアクション：</strong>'+l.nextAction+'（'+l.nextDate+'）</div>':'<div><strong>ネクストアクション：</strong>不要（受注・失注・稼働終了）</div>')+
+        (l.nextAction? '<div><strong>ネクストアクション：</strong>'+l.nextAction+'（'+l.nextDate+'）</div>':'<div><strong>ネクストアクション：</strong>不要（稼働終了）</div>')+
         '<div><strong>先方担当者：</strong>'+(l.contactName||'—')+'（'+(l.contactInfo||'—')+'）</div>'+
         '<div><strong>稼働見込：</strong>'+(l.expectedHours!=null?l.expectedHours+'時間':'—')+'　<strong>売上見込：</strong>'+(l.expectedRevenue!=null?formatYen(l.expectedRevenue):'—')+'</div>'+
         (l.workStart||l.workEnd? '<div><strong>稼働期間：</strong>'+(l.workStart||'未定')+' ～ '+(l.workEnd||'未定')+'</div>':'')+
@@ -1312,66 +1302,74 @@
     renderList();
   });
 
-  // ---- calendar ----
+  // ---- calendar（半期ごとの稼働終了予定ボード） ----
+  // キャリブレーション：2026年9月＝20期下期の開始月（実データに基づき将来・過去の期も自動で計算する）
+  const FISCAL_ANCHOR_MONTHS_TOTAL = 2026*12 + 8; // 0始まりの月番号（1月=0）でSep=8
+  const FISCAL_ANCHOR_PERIOD = 20;
+  function halfBlockIndexForDate(year, monthIdx){
+    return Math.floor(((year*12+monthIdx) - FISCAL_ANCHOR_MONTHS_TOTAL) / 6);
+  }
+  function halfBlockInfo(blockIndex){
+    const total = FISCAL_ANCHOR_MONTHS_TOTAL + 6*blockIndex;
+    const startYear = Math.floor(total/12);
+    const startMonth = total%12; // 0始まり。2=3月（上期開始）、8=9月（下期開始）
+    const periodNum = startYear - 2026 + FISCAL_ANCHOR_PERIOD;
+    const half = startMonth===2 ? '上期' : '下期';
+    const months = [];
+    for(let i=0;i<6;i++){ const t=total+i; months.push({ year: Math.floor(t/12), month: t%12 }); }
+    const endM = months[5];
+    const label = periodNum+'期'+half+'（'+startYear+'年'+(startMonth+1)+'月〜'+endM.year+'年'+(endM.month+1)+'月）';
+    return { blockIndex, periodNum, half, months, label };
+  }
+  function calendarBlockRange(){
+    const now = new Date();
+    const todayBlock = halfBlockIndexForDate(now.getFullYear(), now.getMonth());
+    let minBlock = todayBlock-1, maxBlock = todayBlock+1;
+    companies.forEach(c=>{
+      const l = latestLog(c);
+      if(l && l.workEnd){
+        const d = new Date(l.workEnd+'T00:00:00');
+        const b = halfBlockIndexForDate(d.getFullYear(), d.getMonth());
+        if(b<minBlock) minBlock=b;
+        if(b>maxBlock) maxBlock=b;
+      }
+    });
+    return {todayBlock, minBlock, maxBlock};
+  }
   function renderCalendar(){
-    const y = calDate.getFullYear(), m = calDate.getMonth();
-    document.getElementById('calLabel').textContent = y+'年'+(m+1)+'月';
-    const first = new Date(y,m,1);
-    const startDow = first.getDay();
-    const daysInMonth = new Date(y,m+1,0).getDate();
-    const grid = document.getElementById('calGrid');
-    grid.innerHTML='';
-    ['日','月','火','水','木','金','土'].forEach(d=>{
-      const el=document.createElement('div'); el.className='cal-dow'; el.textContent=d; grid.appendChild(el);
+    const {todayBlock, minBlock, maxBlock} = calendarBlockRange();
+    if(calHalfBlockIndex===null) calHalfBlockIndex = todayBlock;
+    const sel = document.getElementById('calPeriodSelect');
+    const opts = [];
+    for(let b=maxBlock; b>=minBlock; b--){ opts.push(b); }
+    sel.innerHTML = opts.map(b=>{
+      const info = halfBlockInfo(b);
+      return '<option value="'+b+'"'+(b===calHalfBlockIndex?' selected':'')+'>'+info.label+(b===todayBlock?'（今期）':'')+'</option>';
+    }).join('');
+    const info = halfBlockInfo(calHalfBlockIndex);
+    const board = document.getElementById('calHalfBoard');
+    board.innerHTML = info.months.map(mo=>{
+      const monthKey = mo.year+'-'+String(mo.month+1).padStart(2,'0');
+      const items = companies.filter(c=>{ const l = latestLog(c); return l && l.workEnd && l.workEnd.slice(0,7)===monthKey; });
+      return '<div class="kcol"><div class="kcol-head">'+mo.year+'年'+(mo.month+1)+'月<span class="n">'+items.length+'</span></div>'+
+        items.map(c=>{
+          const l = latestLog(c);
+          return '<div class="kcard" data-id="'+c.id+'">'+
+            '<div class="cname">'+c.name+'</div><div class="cind">'+c.industry+'</div>'+
+            '<div class="na">▸ 稼働終了予定：'+l.workEnd+'</div>'+
+            '<div class="meta-row"><span class="owner">'+ownerLabel(l.owner)+'</span></div>'+
+            '</div>';
+        }).join('') + (items.length===0?'<div class="empty" style="padding:12px;">なし</div>':'') +
+        '</div>';
+    }).join('');
+    board.querySelectorAll('.kcard').forEach(card=>{
+      card.addEventListener('click', ()=> openDrawer(parseInt(card.dataset.id)));
     });
-    for(let i=0;i<startDow;i++){ const el=document.createElement('div'); grid.appendChild(el); }
-    const T = todayStr();
-    for(let day=1; day<=daysInMonth; day++){
-      const dateStr = y+'-'+String(m+1).padStart(2,'0')+'-'+String(day).padStart(2,'0');
-      const cell=document.createElement('div');
-      cell.className='cal-cell'+(dateStr===T?' today':'');
-      cell.style.cursor='pointer';
-      cell.innerHTML='<div class="d">'+day+'</div>';
-      const dayCompanies = companies.filter(c=>latestLog(c).nextDate===dateStr);
-      dayCompanies.forEach(c=>{
-        const l = latestLog(c);
-        const diff = daysDiff(l.nextDate);
-        const item=document.createElement('div');
-        item.className='cal-item'+(diff>0?' future':'');
-        item.textContent=c.name;
-        item.title=c.name+'：'+l.nextAction;
-        item.addEventListener('click', (e)=>{
-          e.stopPropagation();
-          document.querySelector('.nav-item[data-nav="list"]').click();
-          openDrawer(c.id);
-        });
-        cell.appendChild(item);
-      });
-      cell.addEventListener('click', ()=> showDayDetail(dateStr, dayCompanies));
-      grid.appendChild(cell);
-    }
   }
-  function showDayDetail(dateStr, dayCompanies){
-    const panel = document.getElementById('dayDetailPanel');
-    const [y,m,d] = dateStr.split('-').map(Number);
-    document.getElementById('dayDetailTitle').textContent = y+'年'+m+'月'+d+'日のネクストアクション（'+dayCompanies.length+'件）';
-    document.getElementById('dayDetailBody').innerHTML = dayCompanies.length===0 ? '<div class="empty">この日にネクストアクションはありません</div>' :
-      '<div class="table-scroll"><table><thead><tr><th>会社名</th><th>担当者</th><th>ネクストアクション</th></tr></thead><tbody>'+
-      dayCompanies.map(c=>{
-        const l = latestLog(c);
-        return '<tr class="row" data-id="'+c.id+'"><td><strong>'+c.name+'</strong></td><td>'+ownerLabel(l.owner)+'</td><td>'+(l.nextAction||'—')+'</td></tr>';
-      }).join('')+'</tbody></table></div>';
-    document.querySelectorAll('#dayDetailBody tr.row').forEach(tr=>{
-      tr.addEventListener('click', ()=>{
-        document.querySelector('.nav-item[data-nav="list"]').click();
-        openDrawer(parseInt(tr.dataset.id));
-      });
-    });
-    panel.style.display = '';
-  }
-  document.getElementById('calPrev').addEventListener('click', ()=>{ calDate.setMonth(calDate.getMonth()-1); renderCalendar(); document.getElementById('dayDetailPanel').style.display='none'; });
-  document.getElementById('calNext').addEventListener('click', ()=>{ calDate.setMonth(calDate.getMonth()+1); renderCalendar(); document.getElementById('dayDetailPanel').style.display='none'; });
-  document.getElementById('calToday').addEventListener('click', ()=>{ calDate = new Date(); renderCalendar(); document.getElementById('dayDetailPanel').style.display='none'; });
+  document.getElementById('calPeriodSelect').addEventListener('change', (e)=>{
+    calHalfBlockIndex = parseInt(e.target.value);
+    renderCalendar();
+  });
 
   // ---- admin ----
   let adminTab = 'person';
