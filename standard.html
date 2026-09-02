@@ -395,15 +395,15 @@
       </div>
       <div class="field"><label>進捗詳細（任意）</label><textarea id="f_detail" placeholder="例）担当者と初回打合せ実施。要件をヒアリング。"></textarea></div>
       <div id="nextActionSection" class="grid2">
-        <div class="field"><label>ネクストアクション</label><select id="f_nextaction"></select></div>
-        <div class="field"><label>ネクストアクション日</label><input type="date" id="f_nextdate"></div>
+        <div class="field"><label>ネクストアクション（任意）</label><select id="f_nextaction"></select></div>
+        <div class="field"><label>ネクストアクション日（任意）</label><input type="date" id="f_nextdate"></div>
       </div>
       <div id="nextActionSkipNote" class="field" style="display:none;color:var(--ink-soft);font-size:13px;">稼働終了のため、ネクストアクションは不要です。</div>
 
       <div class="subhead">先方担当者・稼働見込</div>
       <div class="grid2">
-        <div class="field"><label>担当者の名前</label><input type="text" id="f_contactname" placeholder="例）山田様"></div>
-        <div class="field"><label>担当者の連絡先</label><input type="text" id="f_contactinfo" placeholder="例）090-1234-5678 / yamada@example.com"></div>
+        <div class="field"><label>担当者の名前（任意）</label><input type="text" id="f_contactname" placeholder="例）山田様"></div>
+        <div class="field"><label>担当者の連絡先（任意）</label><input type="text" id="f_contactinfo" placeholder="例）090-1234-5678 / yamada@example.com"></div>
       </div>
       <div class="grid2">
         <div class="field">
@@ -1261,14 +1261,12 @@
     const workEnd = document.getElementById('f_workend').value || null;
     if(!stage){ alert('進捗内容を選択してください'); return; }
     if(stage===OTHER_STAGE && !confidence){ alert('確度を入力してください'); return; }
-    if(!contactName || !contactInfo){ alert('担当者の名前と連絡先は必須です'); return; }
     if(workStart && workEnd && workEnd < workStart){ alert('稼働終了予定は稼働開始予定より後の日付にしてください'); return; }
     const closed = isClosedStage(stage, confidence);
     let nextAction = null, nextDate = null;
     if(!closed){
       nextAction = document.getElementById('f_nextaction').value;
       nextDate = document.getElementById('f_nextdate').value;
-      if(!nextAction || !nextDate){ alert('ネクストアクションとネクストアクション日は必須です'); return; }
     }
     const rate = stage===OTHER_STAGE ? parseRate(confidence) : stageInfo(stage).rate;
     const expectedHours = hoursRaw==='' ? null : parseFloat(hoursRaw);
