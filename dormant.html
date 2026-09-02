@@ -402,7 +402,7 @@
         <div class="field"><label>ネクストアクション</label><select id="f_nextaction"></select></div>
         <div class="field"><label>ネクストアクション日</label><input type="date" id="f_nextdate"></div>
       </div>
-      <div id="nextActionSkipNote" class="field" style="display:none;color:var(--ink-soft);font-size:13px;">受注・失注のため、ネクストアクションは不要です。</div>
+      <div id="nextActionSkipNote" class="field" style="display:none;color:var(--ink-soft);font-size:13px;">受注・失注・稼働終了のため、ネクストアクションは不要です。</div>
 
       <div class="subhead">先方担当者・稼働見込</div>
       <div class="grid2">
@@ -503,6 +503,7 @@
 
   const STAGES = [
     { stage:'未着手', confidence:'未着手', rate:0 },
+    { stage:'稼働終了', confidence:'稼働終了', rate:0 },
     { stage:'失注', confidence:'0%', rate:0 },
     { stage:'商談設定/アポイント設定', confidence:'20%', rate:20 },
     { stage:'提案実施/提案内容作成、先方へ提案実施', confidence:'40%', rate:40 },
@@ -513,7 +514,7 @@
   ];
   function stageInfo(label){ return STAGES.find(s=>s.stage===label) || {stage:label||'—',confidence:'—',rate:0}; }
   const OTHER_STAGE = 'その他';
-  function isClosedStage(stage, confidence){ return stage==='失注' || confidence==='100%'; }
+  function isClosedStage(stage, confidence){ return stage==='失注' || stage==='稼働終了' || confidence==='100%'; }
   function parseRate(confidence){ const n = parseInt(confidence); return isNaN(n) ? 0 : n; }
   function formatYen(n){ return n==null ? '' : '¥'+Math.round(n).toLocaleString('ja-JP'); }
 
@@ -988,7 +989,7 @@
       ? companies.map(c=>({c, l: latestLog(c), monthRevenue: monthOverlapRevenue(c, monthKey)})).filter(r=>r.monthRevenue!=null)
       : latestRows.map(r=>({c:r.c, l:r.l, monthRevenue:r.l.expectedRevenue}));
 
-    const chartStages = [STAGES[0], STAGES[2], STAGES[3], STAGES[4], STAGES[5], STAGES[6], STAGES[7], STAGES[1], {stage:OTHER_STAGE, confidence:'—'}];
+    const chartStages = ['未着手','商談設定/アポイント設定','提案実施/提案内容作成、先方へ提案実施','見積/先方と一定の目合わせ済み','稟議・社内検討/検討段階かを把握、進捗を把握','最終クロージング/条件等の最終詰め実施','受注/稼働確定、注文書済み','失注','稼働終了'].map(stageInfo).concat([{stage:OTHER_STAGE, confidence:'—'}]);
     const revenues = chartStages.map(s=> revenueRows.filter(r=>r.l.stage===s.stage).reduce((sum,r)=> sum + (r.monthRevenue||0), 0));
     const totalCount = countRows.length;
     const totalRevenue = revenueRows.reduce((sum,r)=> sum + (r.monthRevenue||0), 0);
@@ -1088,7 +1089,7 @@
           return '<div class="kcard" data-id="'+c.id+'">'+
             '<div class="cname">'+c.name+'</div><div class="cind">'+c.industry+'</div>'+
             '<div class="bar"><i style="width:'+l.progress+'%"></i></div>'+
-            '<div class="na">▸ '+(l.nextAction||'不要（受注・失注）')+'</div>'+
+            '<div class="na">▸ '+(l.nextAction||'不要（受注・失注・稼働終了）')+'</div>'+
             '<div class="meta-row"><span class="owner">'+ownerLabel(l.owner)+'</span>'+statusPill(l.nextDate)+'</div>'+
             '</div>';
         }).join('') + (items.length===0?'<div class="empty" style="padding:12px;">なし</div>':'') +
@@ -1175,7 +1176,7 @@
       return '<div class="log-entry"><div class="meta"><span>'+(l.date||'-')+'　担当: '+ownerLabel(l.owner)+'</span><span>確度 '+l.confidence+'</span></div>'+
         '<div><strong>進捗内容：</strong>'+ l.stage +'</div>'+
         (l.detail? '<div><strong>進捗詳細：</strong>'+l.detail+'</div>':'')+
-        (l.nextAction? '<div><strong>ネクストアクション：</strong>'+l.nextAction+'（'+l.nextDate+'）</div>':'<div><strong>ネクストアクション：</strong>不要（受注・失注）</div>')+
+        (l.nextAction? '<div><strong>ネクストアクション：</strong>'+l.nextAction+'（'+l.nextDate+'）</div>':'<div><strong>ネクストアクション：</strong>不要（受注・失注・稼働終了）</div>')+
         '<div><strong>先方担当者：</strong>'+(l.contactName||'—')+'（'+(l.contactInfo||'—')+'）</div>'+
         '<div><strong>稼働見込：</strong>'+(l.expectedHours!=null?l.expectedHours+'時間':'—')+'　<strong>売上見込：</strong>'+(l.expectedRevenue!=null?formatYen(l.expectedRevenue):'—')+'</div>'+
         (l.workStart||l.workEnd? '<div><strong>稼働期間：</strong>'+(l.workStart||'未定')+' ～ '+(l.workEnd||'未定')+'</div>':'')+
