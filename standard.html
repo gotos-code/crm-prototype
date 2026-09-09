@@ -329,6 +329,10 @@
 
       <!-- BOARD VIEW -->
       <div class="view" id="view-board">
+        <div class="mini-tabs" id="boardGroupTabs">
+          <div class="mini-tab active" data-mode="stage">進捗ごと</div>
+          <div class="mini-tab" data-mode="confidence">確度ごと</div>
+        </div>
         <div class="search-bar">
           <input type="text" id="boardSearchBox" placeholder="会社名・業種で検索">
         </div>
@@ -542,6 +546,7 @@
   let editingLogId = null;
   let calHalfBlockIndex = null;
   let forecastViewMode = 'monthly';
+  let boardGroupMode = 'stage';
   let summaryViewMode = 'total';
   let summaryMonthDate = new Date();
 
@@ -1073,23 +1078,38 @@
   document.getElementById('summaryMonthNext').addEventListener('click', ()=>{ summaryMonthDate.setMonth(summaryMonthDate.getMonth()+1); renderSummary(); });
 
   // ---- board ----
+  function boardCardHtml(c){
+    const l = latestLog(c);
+    return '<div class="kcard" data-id="'+c.id+'">'+
+      '<div class="cname">'+c.name+'</div><div class="cind">'+c.industry+'</div>'+
+      '<div class="bar"><i style="width:'+l.progress+'%"></i></div>'+
+      '<div class="na">▸ '+(l.nextAction||'不要（稼働終了）')+'</div>'+
+      '<div class="meta-row"><span class="owner">'+ownerLabel(l.owner)+'</span>'+statusPill(l.nextDate)+'</div>'+
+      '</div>';
+  }
   function renderBoard(){
     const q = document.getElementById('boardSearchBox').value.trim().toLowerCase();
     const filtered = companies.filter(c=> c.name.toLowerCase().includes(q) || c.industry.toLowerCase().includes(q));
     const kanban = document.getElementById('kanbanBoard');
-    const boardStages = STAGES.concat([{stage:OTHER_STAGE, confidence:'—'}]);
-    kanban.innerHTML = boardStages.map(s=>{
-      const items = filtered.filter(c=> latestLog(c).stage===s.stage);
-      return '<div class="kcol"><div class="kcol-head">'+s.stage+'（'+s.confidence+'）<span class="n">'+items.length+'</span></div>'+
-        items.map(c=>{
-          const l = latestLog(c);
-          return '<div class="kcard" data-id="'+c.id+'">'+
-            '<div class="cname">'+c.name+'</div><div class="cind">'+c.industry+'</div>'+
-            '<div class="bar"><i style="width:'+l.progress+'%"></i></div>'+
-            '<div class="na">▸ '+(l.nextAction||'不要（稼働終了）')+'</div>'+
-            '<div class="meta-row"><span class="owner">'+ownerLabel(l.owner)+'</span>'+statusPill(l.nextDate)+'</div>'+
-            '</div>';
-        }).join('') + (items.length===0?'<div class="empty" style="padding:12px;">なし</div>':'') +
+    let columns;
+    if(boardGroupMode==='confidence'){
+      columns = CONFIDENCE_OPTIONS.map(o=>({
+        title: o.label+'（'+o.range+'）',
+        items: filtered.filter(c=> latestLog(c).confidence===o.label)
+      })).concat([{
+        title: '未入力',
+        items: filtered.filter(c=> !CONFIDENCE_OPTIONS.some(o=>o.label===latestLog(c).confidence))
+      }]);
+    } else {
+      const boardStages = STAGES.concat([{stage:OTHER_STAGE, confidence:'—'}]);
+      columns = boardStages.map(s=>({
+        title: s.stage+'（'+s.confidence+'）',
+        items: filtered.filter(c=> latestLog(c).stage===s.stage)
+      }));
+    }
+    kanban.innerHTML = columns.map(col=>{
+      return '<div class="kcol"><div class="kcol-head">'+col.title+'<span class="n">'+col.items.length+'</span></div>'+
+        col.items.map(boardCardHtml).join('') + (col.items.length===0?'<div class="empty" style="padding:12px;">なし</div>':'') +
         '</div>';
     }).join('');
     kanban.querySelectorAll('.kcard').forEach(card=>{
@@ -1097,6 +1117,14 @@
     });
   }
   document.getElementById('boardSearchBox').addEventListener('input', renderBoard);
+  document.querySelectorAll('#boardGroupTabs .mini-tab').forEach(t=>{
+    t.addEventListener('click', ()=>{
+      document.querySelectorAll('#boardGroupTabs .mini-tab').forEach(x=>x.classList.remove('active'));
+      t.classList.add('active');
+      boardGroupMode = t.dataset.mode;
+      renderBoard();
+    });
+  });
 
   // ---- drawer ----
   const stageOptionsHtml = '<option value="" disabled selected>選択してください</option>' +
