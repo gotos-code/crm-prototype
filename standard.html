@@ -381,6 +381,7 @@
       </div>
       <div style="display:flex;gap:8px;margin-bottom:6px;">
         <button class="btn btn-sm" id="saveCompanyInfo" type="button">会社情報を更新</button>
+        <button class="btn btn-sm" id="moveToDormantBtn" type="button">休眠顧客へ移動</button>
         <button class="btn btn-sm" id="deleteCompanyBtn" type="button" style="color:var(--danger);border-color:var(--danger);">この会社を削除</button>
       </div>
 
@@ -391,7 +392,7 @@
       </div>
       <div class="grid2">
         <div class="field"><label>進捗内容</label><select id="f_stage"></select></div>
-        <div class="field"><label>確度</label><input type="text" id="f_confidence" readonly disabled></div>
+        <div class="field"><label>契約更新確度</label><select id="f_confidence"></select></div>
       </div>
       <div class="field"><label>進捗詳細（任意）</label><textarea id="f_detail" placeholder="例）担当者と初回打合せ実施。要件をヒアリング。"></textarea></div>
       <div id="nextActionSection" class="grid2">
@@ -504,8 +505,14 @@
   ];
   function stageInfo(label){ return STAGES.find(s=>s.stage===label) || {stage:label||'—',confidence:'—',rate:0}; }
   const OTHER_STAGE = 'その他';
-  function isClosedStage(stage, confidence){ return stage==='稼働終了' || stage==='失注' || confidence==='100%'; }
-  function parseRate(confidence){ const n = parseInt(confidence); return isNaN(n) ? 0 : n; }
+  function isClosedStage(stage, confidence){ return stage==='稼働終了' || stage==='失注'; }
+  const CONFIDENCE_OPTIONS = [
+    { label:'低い', range:'〜50%', rate:25 },
+    { label:'可能性あり', range:'50%〜80%', rate:65 },
+    { label:'ほぼ確定', range:'80%〜99%', rate:90 },
+    { label:'確定', range:'100%', rate:100 },
+  ];
+  function confidenceRate(label){ const o = CONFIDENCE_OPTIONS.find(x=>x.label===label); return o ? o.rate : 0; }
   function formatYen(n){ return n==null ? '' : '¥'+Math.round(n).toLocaleString('ja-JP'); }
 
   async function loadCompanies(){
@@ -703,7 +710,7 @@
     const { data: newCompany, error } = await window.__SUPA.from('companies').insert({ name, industry, category: CRM_CATEGORY }).select().single();
     if(!error && newCompany){
       await window.__SUPA.from('company_logs').insert({
-        company_id: newCompany.id, stage: '未稼働', confidence_label: '未稼働', progress: 0
+        company_id: newCompany.id, stage: '未稼働', confidence_label: '低い', progress: 0
       });
     }
     btn.disabled = false; btn.textContent = 'この内容で追加する';
@@ -816,7 +823,7 @@
       if(error || !newCompany){ failed++; continue; }
       const { error: logError } = await window.__SUPA.from('company_logs').insert({
         company_id: newCompany.id,
-        stage: '未稼働', confidence_label: '未稼働', progress: 0
+        stage: '未稼働', confidence_label: '低い', progress: 0
       });
       if(logError){ failed++; } else { success++; }
     }
@@ -1097,6 +1104,9 @@
     '<option value="'+OTHER_STAGE+'">'+OTHER_STAGE+'</option>';
   document.getElementById('f_stage').innerHTML = stageOptionsHtml;
   document.getElementById('f_nextaction').innerHTML = stageOptionsHtml;
+  const confidenceOptionsHtml = '<option value="" disabled selected>選択してください</option>' +
+    CONFIDENCE_OPTIONS.map(o=>'<option value="'+o.label+'">'+o.label+'（'+o.range+'）</option>').join('');
+  document.getElementById('f_confidence').innerHTML = confidenceOptionsHtml;
   function ownerOptionsHtml(selected){
     return REPS.map(r=>'<option value="'+r+'"'+(r===selected?' selected':'')+'>'+ownerLabel(r)+'</option>').join('');
   }
@@ -1104,28 +1114,11 @@
 
   function updateNextActionVisibility(){
     const stage = document.getElementById('f_stage').value;
-    const confidence = document.getElementById('f_confidence').value;
-    const closed = isClosedStage(stage, confidence);
+    const closed = isClosedStage(stage);
     document.getElementById('nextActionSection').style.display = closed ? 'none' : '';
     document.getElementById('nextActionSkipNote').style.display = closed ? '' : 'none';
   }
-  document.getElementById('f_stage').addEventListener('change', ()=>{
-    const stage = document.getElementById('f_stage').value;
-    const confInput = document.getElementById('f_confidence');
-    if(stage===OTHER_STAGE){
-      confInput.value = '';
-      confInput.readOnly = false;
-      confInput.disabled = false;
-      confInput.placeholder = '確度を入力（例：50%）';
-    } else {
-      confInput.value = stageInfo(stage).confidence;
-      confInput.readOnly = true;
-      confInput.disabled = true;
-      confInput.placeholder = '';
-    }
-    updateNextActionVisibility();
-  });
-  document.getElementById('f_confidence').addEventListener('input', updateNextActionVisibility);
+  document.getElementById('f_stage').addEventListener('change', updateNextActionVisibility);
 
   function resetLogForm(){
     editingLogId = null;
@@ -1135,8 +1128,7 @@
     document.getElementById('f_date').value = todayStr();
     document.getElementById('f_owner').innerHTML = ownerOptionsHtml(currentUser);
     document.getElementById('f_stage').value = '';
-    const confInput = document.getElementById('f_confidence');
-    confInput.value = ''; confInput.readOnly = true; confInput.disabled = true; confInput.placeholder = '';
+    document.getElementById('f_confidence').value = '';
     document.getElementById('f_detail').value='';
     document.getElementById('f_nextaction').value='';
     document.getElementById('f_nextdate').value='';
@@ -1185,12 +1177,7 @@
         document.getElementById('f_date').value = log.date||todayStr();
         document.getElementById('f_owner').innerHTML = ownerOptionsHtml(log.owner||currentUser);
         document.getElementById('f_stage').value = STAGES.find(s=>s.stage===log.stage) ? log.stage : OTHER_STAGE;
-        const confInput = document.getElementById('f_confidence');
-        if(document.getElementById('f_stage').value===OTHER_STAGE){
-          confInput.value = log.confidence; confInput.readOnly=false; confInput.disabled=false;
-        } else {
-          confInput.value = stageInfo(log.stage).confidence; confInput.readOnly=true; confInput.disabled=true;
-        }
+        document.getElementById('f_confidence').value = log.confidence || '';
         document.getElementById('f_detail').value = log.detail||'';
         document.getElementById('f_nextaction').value = log.nextAction||'';
         document.getElementById('f_nextdate').value = log.nextDate||'';
@@ -1237,6 +1224,19 @@
     renderList();
     alert('会社情報を更新しました');
   });
+  document.getElementById('moveToDormantBtn').addEventListener('click', async ()=>{
+    const c = companies.find(x=>x.id===activeCompanyId);
+    if(!confirm(c.name+'を休眠顧客へ移動します。やり取りの履歴はそのまま引き継がれます。よろしいですか？')) return;
+    const btn = document.getElementById('moveToDormantBtn');
+    btn.disabled = true;
+    const { error } = await window.__SUPA.from('companies').update({ category: 'dormant' }).eq('id', c.id);
+    btn.disabled = false;
+    if(error){ alert('移動に失敗しました：'+error.message); return; }
+    companies = companies.filter(x=>x.id!==c.id);
+    document.getElementById('overlay').classList.remove('open');
+    renderList();
+    alert(c.name+'を休眠顧客へ移動しました。');
+  });
   document.getElementById('deleteCompanyBtn').addEventListener('click', async ()=>{
     const c = companies.find(x=>x.id===activeCompanyId);
     if(!confirm(c.name+'を削除します。記録もすべて削除され、元に戻せません。よろしいですか？')) return;
@@ -1260,15 +1260,15 @@
     const workStart = document.getElementById('f_workstart').value || null;
     const workEnd = document.getElementById('f_workend').value || null;
     if(!stage){ alert('進捗内容を選択してください'); return; }
-    if(stage===OTHER_STAGE && !confidence){ alert('確度を入力してください'); return; }
+    if(!confidence){ alert('契約更新確度を選択してください'); return; }
     if(workStart && workEnd && workEnd < workStart){ alert('稼働終了予定は稼働開始予定より後の日付にしてください'); return; }
-    const closed = isClosedStage(stage, confidence);
+    const closed = isClosedStage(stage);
     let nextAction = null, nextDate = null;
     if(!closed){
       nextAction = document.getElementById('f_nextaction').value || null;
       nextDate = document.getElementById('f_nextdate').value || null;
     }
-    const rate = stage===OTHER_STAGE ? parseRate(confidence) : stageInfo(stage).rate;
+    const rate = confidenceRate(confidence);
     const expectedHours = hoursRaw==='' ? null : parseFloat(hoursRaw);
     const expectedRevenue = revenueRaw==='' ? null : parseFloat(revenueRaw);
     const saveBtn = document.getElementById('saveLog');
