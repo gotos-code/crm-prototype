@@ -1265,8 +1265,8 @@
     const closed = isClosedStage(stage, confidence);
     let nextAction = null, nextDate = null;
     if(!closed){
-      nextAction = document.getElementById('f_nextaction').value;
-      nextDate = document.getElementById('f_nextdate').value;
+      nextAction = document.getElementById('f_nextaction').value || null;
+      nextDate = document.getElementById('f_nextdate').value || null;
     }
     const rate = stage===OTHER_STAGE ? parseRate(confidence) : stageInfo(stage).rate;
     const expectedHours = hoursRaw==='' ? null : parseFloat(hoursRaw);
